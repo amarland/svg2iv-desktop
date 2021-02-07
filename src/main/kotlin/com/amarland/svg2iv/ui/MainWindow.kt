@@ -1,40 +1,15 @@
+package com.amarland.svg2iv.ui
+
 import androidx.compose.desktop.AppWindowAmbient
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayout
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Checkbox
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ExtendedFloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Scaffold
-import androidx.compose.material.ScaffoldState
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
-import androidx.compose.material.darkColors
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Providers
 import androidx.compose.runtime.ambientOf
@@ -45,14 +20,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.amarland.svg2iv.MainWindowBloc
+import com.amarland.svg2iv.MainWindowEvent
+import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
+import com.amarland.svg2iv.outerworld.openFileChooser
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
+private val androidGreen = Color(0xFF00DE7A)
+private val androidBlue = Color(0xFF2196F3)
+
+@ObsoleteCoroutinesApi
 private val BlocAmbient = ambientOf<MainWindowBloc>()
 
 private val ScaffoldStateAmbient = ambientOf<ScaffoldState>()
@@ -63,21 +41,33 @@ private val ScaffoldStateAmbient = ambientOf<ScaffoldState>()
 @ExperimentalMaterialApi
 @ObsoleteCoroutinesApi
 @Suppress("FunctionName")
-fun MainWindowContent(mainWindowBloc: MainWindowBloc) {
+fun MainWindowContent(bloc: MainWindowBloc) {
+    val state = bloc.state.collectAsState().value
+
     MaterialTheme(
-        colors = darkColors(primary = Color(0xFF00DE7A), secondary = Color(0xFF2196F3))
+        colors = if (state.isThemeDark) {
+            darkColors(primary = androidGreen, secondary = androidBlue)
+        } else {
+            lightColors(primary = androidBlue, secondary = androidGreen)
+        }
     ) {
         Column {
             TopAppBar(
                 title = { Text("SVG to ImageVector conversion tool") },
-                actions = { IconButton(onClick = {}) { Icon(imageVector = Icons.Outlined.Info) } }
+                actions = {
+                    IconButton(
+                        onClick = { bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked) }
+                    ) { Icon(imageVector = CustomIcons.ToggleTheme) }
+                    IconButton(
+                        onClick = { /* TODO */ }
+                    ) { Icon(imageVector = Icons.Outlined.Info) }
+                }
             )
             Row(modifier = Modifier.background(color = MaterialTheme.colors.background)) {
                 val scaffoldState = rememberScaffoldState()
-                val state = mainWindowBloc.state.collectAsState().value
 
                 Providers(
-                    BlocAmbient provides mainWindowBloc,
+                    BlocAmbient provides bloc,
                     ScaffoldStateAmbient provides scaffoldState
                 ) {
                     // not an absolute necessity, but makes handling Snackbars easier,
@@ -102,21 +92,19 @@ fun MainWindowContent(mainWindowBloc: MainWindowBloc) {
                                 state.destinationDirectorySelectionTextFieldState.isErrorValue,
                             )
                             OutlinedTextField(
-                                value = "",
+                                value = state.extensionReceiverTextFieldState.value,
                                 onValueChange = {},
                                 modifier = Modifier.fillMaxWidth(),
                                 label = { Text("Extension receiver (optional)") },
                                 singleLine = true,
-                                placeholder = { Text("") }
+                                placeholder = { Text(state.extensionReceiverTextFieldState.value) }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = state.isAllInOneCheckboxChecked,
-                                    onCheckedChange = { isChecked ->
-                                        mainWindowBloc.addEvent(
-                                            AllInOneCheckboxClicked(isChecked)
-                                        )
+                                    onCheckedChange = {
+                                        bloc.addEvent(MainWindowEvent.AllInOneCheckboxClicked)
                                     },
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
@@ -131,23 +119,29 @@ fun MainWindowContent(mainWindowBloc: MainWindowBloc) {
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            imageVector = Icons.Outlined.Build,
+                            imageVector = state.preview,
                             modifier = Modifier.fillMaxSize(0.7F),
                             colorFilter = ColorFilter.tint(MaterialTheme.colors.onBackground)
                         )
                         PreviewSelectionButton(
                             icon = Icons.Outlined.ArrowBack,
+                            onClick = {
+                                bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
+                            },
                             modifier = Modifier.align(Alignment.CenterStart),
-                            isEnabled = false
+                            isEnabled = state.isPreviousPreviewButtonEnabled
                         )
                         PreviewSelectionButton(
                             icon = Icons.Outlined.ArrowForward,
+                            onClick = {
+                                bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
+                            },
                             modifier = Modifier.align(Alignment.CenterEnd),
-                            isEnabled = false
+                            isEnabled = state.isNextPreviewButtonEnabled
                         )
                         ExtendedFloatingActionButton(
                             text = { Text("Convert") },
-                            onClick = { mainWindowBloc.addEvent(ConvertButtonClicked) },
+                            onClick = { bloc.addEvent(MainWindowEvent.ConvertButtonClicked) },
                             modifier = Modifier.align(Alignment.BottomEnd),
                             icon = { Icon(imageVector = CustomIcons.ConvertVector) }
                         )
@@ -162,11 +156,12 @@ fun MainWindowContent(mainWindowBloc: MainWindowBloc) {
 @Suppress("FunctionName")
 private fun PreviewSelectionButton(
     icon: ImageVector,
+    onClick: () -> Unit,
     modifier: Modifier,
-    isEnabled: Boolean = true
+    isEnabled: Boolean
 ) {
     OutlinedButton(
-        onClick = {},
+        onClick = onClick,
         modifier = modifier.preferredSize(48.dp),
         enabled = isEnabled,
         shape = RoundedCornerShape(percent = 50),
@@ -217,10 +212,12 @@ private fun FileSystemEntitySelectionField(
                     val event = when (mode) {
                         FileSystemEntitySelectionMode.SOURCE ->
                             files.takeIf { it.isNotEmpty() }
-                                ?.let { SourceFilesSelected(files) }
+                                ?.let { MainWindowEvent.SourceFilesSelected(files.toList()) }
                         FileSystemEntitySelectionMode.DESTINATION -> {
                             files.singleOrNull()
-                                ?.let { directory -> DestinationDirectorySelected(directory) }
+                                ?.let { directory ->
+                                    MainWindowEvent.DestinationDirectorySelected(directory)
+                                }
                         }
                     }
                     if (event != null) bloc.addEvent(event)
@@ -246,35 +243,3 @@ suspend fun launchEffect(effect: MainWindowEffect) {
     }
 }
 */
-
-private fun openFileChooser(
-    parent: Frame,
-    mode: FileSystemEntitySelectionMode
-): Array<File> {
-    return if (mode == FileSystemEntitySelectionMode.SOURCE)
-        FileDialog(parent).apply {
-            file = "*.svg" // for Windows
-            setFilenameFilter { _, name -> name.endsWith(".svg") } // for other OSes
-            isMultipleMode = true
-            isVisible = true
-        }.files ?: emptyArray()
-    else {
-        with(JFileChooser()) {
-            when (mode) {
-                // not reachable, the multi-selection "chooser" is too confusing IMO
-                FileSystemEntitySelectionMode.SOURCE -> {
-                    fileFilter = FileNameExtensionFilter("SVG Files", "svg")
-                    isMultiSelectionEnabled = true
-                }
-                FileSystemEntitySelectionMode.DESTINATION -> {
-                    fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                }
-            }
-            showDialog(parent, "Select")
-            return@with selectedFiles?.takeIf { it.isNotEmpty() }
-                ?: selectedFile?.let { arrayOf(it) } ?: emptyArray()
-        }
-    }
-}
-
-private enum class FileSystemEntitySelectionMode { SOURCE, DESTINATION }

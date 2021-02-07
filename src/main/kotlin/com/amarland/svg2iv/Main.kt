@@ -1,7 +1,10 @@
+package com.amarland.svg2iv
+
 import androidx.compose.desktop.Window
 import androidx.compose.foundation.layout.ExperimentalLayout
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.ui.unit.IntSize
+import com.amarland.svg2iv.ui.MainWindowContent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 
@@ -10,7 +13,7 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 @ExperimentalMaterialApi
 @ObsoleteCoroutinesApi
 fun main() = Window(
-    title = "svg2iv",
+    title = "com/amarland/svg2iv",
     size = IntSize(800, 350),
     resizable = false
 ) {
