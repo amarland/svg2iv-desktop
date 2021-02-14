@@ -1,31 +1,23 @@
 package com.amarland.svg2iv.outerworld
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorStop
-import androidx.compose.ui.graphics.DefaultAlpha
-import androidx.compose.ui.graphics.LinearGradient
-import androidx.compose.ui.graphics.RadialGradient
-import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.asTypeName
+import com.squareup.kotlinpoet.asClassName
 import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.functions
-import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.jvm.jvmName
+import kotlin.reflect.full.valueParameters
+import kotlin.reflect.jvm.isAccessible
 
 private const val DEFAULT_IMAGE_VECTOR_NAME = "\u200B"
 
@@ -43,48 +35,51 @@ fun FileSpec.Builder.addImageVector(
 ): FileSpec.Builder {
     val backingPropertyName = "_${imageVector.name.decapitalize()}"
     val publicPropertyName = imageVector.name
-
-    val imageVectorTypeName = ImageVector::class.asTypeName()
+    val imageVectorClassName = ImageVector::class.asClassName()
 
     addProperty(
-        PropertySpec.builder(backingPropertyName, imageVectorTypeName.copy(nullable = true))
+        PropertySpec.builder(backingPropertyName, imageVectorClassName.copy(nullable = true))
             .mutable()
             .addModifiers(KModifier.PRIVATE)
             .initializer("null")
             .build()
     )
     addProperty(
-        PropertySpec.builder(publicPropertyName, imageVectorTypeName)
+        PropertySpec.builder(publicPropertyName, imageVectorClassName)
             .getter(
                 FunSpec.getterBuilder()
                     .addCode(
                         CodeBlock.builder()
                             .add("$backingPropertyName ?: run {")
                             .addLineSeparator()
-                            .indent()
+                            .indentFourSpaces()
                             .add(
                                 CodeBlock.builder()
                                     .addMemberCall(
-                                        ImageVector.Builder::class.primaryConstructor!!,
+                                        "ImageVector.Builder",
                                         Pair(
                                             "name",
                                             // "bypass" KNOWN_PARAMETERS_WITH_DEFAULT_VALUES
                                             imageVector.name.takeUnless { it == DefaultGroupName }
                                                 ?: DEFAULT_IMAGE_VECTOR_NAME
                                         ),
-                                        *imageVector.propertiesAsNameValuePairs { props ->
-                                            props.subList(1)
+                                        *imageVector.propertiesAsOrderedNameValuePairs(
+                                            targetCallable = ImageVector.Builder::class
+                                                .primaryConstructor!!
+                                        ) { propertyName ->
+                                            !propertyName.startsWith("default") &&
+                                                    !propertyName.startsWith("viewport")
                                         }
                                     )
                                     .build()
                             )
                             .addLineSeparator()
-                            .indent()
+                            .indentFourSpaces()
                             .add(".")
                             .add(getCodeBlockForGroup(imageVector.root))
                             .add(".build()")
                             .addLineSeparator()
-                            .unindent()
+                            .unindentFourSpaces()
                             .add("}")
                             .addLineSeparator()
                             .build()
@@ -99,44 +94,50 @@ fun FileSpec.Builder.addImageVector(
 fun getCodeBlockForGroup(group: VectorGroup): CodeBlock =
     with(CodeBlock.builder()) {
         addMemberCall(
-            ImageVector.Builder::group,
-            *group.propertiesAsNameValuePairs { props ->
-                props.subList(0, props.lastIndex - 1) // excluding `clipPathData` and `children`
+            "group",
+            *group.propertiesAsOrderedNameValuePairs(
+                targetCallable = ImageVector.Builder::group
+            ) { propertyName ->
+                propertyName != "size" &&
+                        propertyName != "children" &&
+                        propertyName != "clipPathData"
             },
-            // TODO
+            "clipPathData" to group.clipPathData
         )
         add(" {")
         addLineSeparator()
-        indent()
+        indentFourSpaces()
         for (node in group) {
             val block = when (node) {
                 is VectorGroup -> getCodeBlockForGroup(node)
                 is VectorPath -> getCodeBlockForPath(node)
             }
             add(block)
+            addLineSeparator()
         }
-        addLineSeparator()
-        unindent()
+        unindentFourSpaces()
         add("}")
         build()
     }
 
 fun getCodeBlockForPath(path: VectorPath): CodeBlock =
     with(CodeBlock.builder()) {
-        addMemberCall(
-            ImageVector.Builder::path,
-            *path.propertiesAsNameValuePairs { props ->
-                props.subList(0, props.lastIndex) // excluding `pathBuilder`
-            }
-        )
+        addMemberCall("path", *path.propertiesAsOrderedNameValuePairs(
+            targetCallable = ImageVector.Builder::path
+        ) { propertyName -> propertyName != "pathData" && !propertyName.startsWith("trimPath") })
         add(" {")
         addLineSeparator()
-        indent()
+        indentFourSpaces()
         for (node in path.pathData) {
-            // TODO
+            val targetFunction = getDslExtensionFunctionForPathNode(node)
+            val block = getSingleLineCodeBlockForMember(
+                targetFunction.name,
+                *node.propertiesAsOrderedNameValuePairs(targetCallable = targetFunction).values()
+            )
+            add(block)
+            addLineSeparator()
         }
-        addLineSeparator()
-        unindent()
+        unindentFourSpaces()
         add("}")
         build()
     }
@@ -145,33 +146,68 @@ fun getCodeBlockForPath(path: VectorPath): CodeBlock =
 
 private fun CodeBlock.Builder.addLineSeparator() = add(System.lineSeparator())
 
+private fun CodeBlock.Builder.indentFourSpaces() = indent().indent()
+private fun CodeBlock.Builder.unindentFourSpaces() = unindent().unindent()
+
 private fun CodeBlock.Builder.addMemberCall(
-    member: KCallable<*>,
-    vararg arguments: Pair<String, Any>
-) = add(getCodeBlockForMember(member, *arguments))
+    memberName: String,
+    vararg arguments: Pair<String?, Any?>
+) = add(getBuilderStyleCodeBlockForMember(memberName, *arguments))
+
+private fun getSingleLineCodeBlockForMember(
+    memberName: String,
+    vararg arguments: Any?
+): CodeBlock {
+    val block = getBuilderStyleCodeBlockForMember(
+        memberName,
+        *arguments.map { null to it }.toTypedArray(),
+        wrapLines = false
+    )
+    return if (arguments.isEmpty()) block.toBuilder().add("()").build() else block
+}
 
 /*
- * if at least one argument different from default values: `member`
- * otherwise: ```member(
- *                   argName = argValue,
- *                   [...]
- *               )```
+ * - if at least one argument different from default values:
+ *     `member`
+ * - otherwise:
+ *     - if wrapLines: ```member(
+ *                            argName = argValue,
+ *                            [...],
+ *                        )```
+ *     - else: `member(argName = argValue, [...])`
  */
-private fun getCodeBlockForMember(member: KCallable<*>, vararg arguments: Pair<String, Any>) =
+private fun getBuilderStyleCodeBlockForMember(
+    memberName: String,
+    vararg arguments: Pair<String?, Any?>,
+    wrapLines: Boolean = true
+): CodeBlock =
     with(CodeBlock.builder()) {
-        add("%M", member.asMemberName())
+        add(memberName)
         val argumentBlocks = arguments.mapNotNull { (name, value) ->
             getCodeBlockForArgument(name, value)
         }
         if (argumentBlocks.isNotEmpty()) {
             add("(")
-            addLineSeparator()
-            indent()
-            for (block in argumentBlocks) {
-                add(block)
+            if (wrapLines) {
                 addLineSeparator()
+                indentFourSpaces()
             }
-            unindent()
+            for ((index, block) in argumentBlocks.withIndex()) {
+                val isProcessingLastBlock = index == argumentBlocks.lastIndex
+
+                if (!wrapLines && isProcessingLastBlock || argumentBlocks.size == 1) {
+                    add(block.toString().let { it.substring(0 until it.lastIndex) })
+                } else {
+                    add(block)
+                }
+
+                if (wrapLines) {
+                    addLineSeparator()
+                } else if (!isProcessingLastBlock) {
+                    add(" ")
+                }
+            }
+            if (wrapLines) unindentFourSpaces()
             add(")")
         }
         build()
@@ -180,102 +216,182 @@ private fun getCodeBlockForMember(member: KCallable<*>, vararg arguments: Pair<S
 /*
  * `argName = argValue,`
  */
-private inline fun <reified T> getCodeBlockForArgument(argName: String, argValue: T): CodeBlock? {
-    if (KNOWN_PARAMETERS_WITH_DEFAULT_VALUES[argName] == argValue) return null
+private fun getCodeBlockForArgument(argName: String?, argValue: Any?): CodeBlock? {
+    if (argValue == null)
+        return null
+
+    if (KNOWN_PARAMETERS_WITH_DEFAULT_VALUES[argName] == argValue)
+        return null
 
     val block = when (argValue) {
+        is CodeBlock -> argValue
+
         is String -> CodeBlock.of(
             "%S", argValue.takeUnless { it == DEFAULT_IMAGE_VECTOR_NAME } ?: DefaultGroupName
         )
-        is Number -> CodeBlock.of("%L", argValue)
+        is Float -> CodeBlock.of(argValue.toLiteral())
+        is Int -> CodeBlock.of("0x${argValue.toString(16).toUpperCase()}") // color int
+        is Boolean -> CodeBlock.of(argValue.toString())
 
-        is Dp -> CodeBlock.of("%L.%M", argValue.value, Float::dp.asMemberName())
+        is Dp -> CodeBlock.of("$argValue.dp")
+        is Offset -> CodeBlock.of("Offset(${argValue.x.toLiteral()}, ${argValue.y.toLiteral()})")
+
+        is Array<*> -> { // assume array means vararg
+            CodeBlock.of(argValue.mapIndexed { index, value ->
+                getCodeBlockForArgument(null, value).toString().let {
+                    // erase the comma added by the recursive call, it will be added by this one
+                    if (index == argValue.size - 1) it.substring(0 until it.length - 1) else it
+                }
+            }.joinToString(separator = System.lineSeparator()))
+        }
+        is List<*> -> getBuilderStyleCodeBlockForMember(
+            "listOf",
+            *argValue.map { null to it }.toTypedArray()
+        )
+
+        is PathNode -> {
+            val clazz = argValue::class
+            getSingleLineCodeBlockForMember(
+                "PathNode.${clazz.simpleName!!}",
+                *argValue.propertiesAsOrderedNameValuePairs(clazz.primaryConstructor!!).values()
+            )
+        }
 
         is Color -> getCodeBlockForColor(argValue)
-        is LinearGradient,
-        is RadialGradient -> getCodeBlockForGradient(argValue as ShaderBrush)
+        is SolidColor -> getSingleLineCodeBlockForMember(
+            "SolidColor",
+            getCodeBlockForColor(argValue.value)
+        )
+        is LinearGradient -> {
+            @Suppress("USELESS_CAST")
+            getCodeBlockForGradient(argValue as LinearGradient)
+        }
+        is RadialGradient -> {
+            @Suppress("USELESS_CAST")
+            getCodeBlockForGradient(argValue as RadialGradient)
+        }
 
         is Pair<*, *> -> {
-            val isColorStop = T::class.typeParameters
-                .map { it.upperBounds.single() } == listOf(Float::class, Color::class)
-            @Suppress("UNCHECKED_CAST")
-            if (isColorStop) {
-                val (stop, color) = argValue as ColorStop
+            val (stop, color) = argValue
+            if (stop is Float && color is Color) {
                 CodeBlock.builder()
-                    .add("%L to ", stop)
+                    .add("${stop.toLiteral()} to ")
                     .add(getCodeBlockForColor(color))
                     .build()
             } else null
         }
-        T::class.isSubclassOf(Enum::class) ->
-            CodeBlock.of("%T.%S", T::class.asTypeName(), argValue.toString())
+
+        is Enum<*> -> CodeBlock.of("${argValue::class.simpleName}.$argValue")
 
         else -> null
-    } ?: throw NotImplementedError("Unexpected type: ${T::class.jvmName}")
+    } ?: throw NotImplementedError("Unexpected type: ${argValue::class.simpleName}")
 
     return CodeBlock.builder()
-        .add("$argName = ")
+        .add(if (!argName.isNullOrEmpty()) "$argName = " else "")
         .add(block)
         .add(",")
         .build()
 }
 
+private fun Float.toLiteral() = (if (rem(1) == 0F) toInt().toString() else toString()) + "F"
+
 private fun getCodeBlockForColor(color: Color) =
-    CodeBlock.of("%M(%L)", Color::class.primaryConstructor!!.asMemberName(), color)
+    getSingleLineCodeBlockForMember("Color", color.toArgb())
 
 private inline fun <reified T : ShaderBrush> getCodeBlockForGradient(gradient: T): CodeBlock {
-    val properties = T::class.memberProperties
+    val properties = T::class.declaredMemberProperties
 
     @Suppress("UNCHECKED_CAST")
     val colors = properties.firstWithName("colors").get(gradient) as List<Color>
 
     @Suppress("UNCHECKED_CAST")
-    val stops = properties.firstWithName("stops").get(gradient) as List<Float>
+    val stops = properties.firstWithName("stops").get(gradient) as? List<Float>
     val hasStops = !stops.isNullOrEmpty()
 
-    val firstFunctionParameterName = if (hasStops) "colorStops" else "colors"
-
-    return getCodeBlockForMember(
-        Brush.Companion::class.functions
-            .first { function ->
-                function.name.startsWith(
-                    if (gradient is LinearGradient) "linear" else "radial"
-                ) && function.parameters[0].name == firstFunctionParameterName
-            },
+    return getBuilderStyleCodeBlockForMember(
+        "Brush." + if (gradient is LinearGradient) "linearGradient" else "radialGradient",
         Pair(
-            firstFunctionParameterName,
-            if (hasStops) stops.zip(colors) { stop, color -> stop to color }
-            else colors
+            if (hasStops) null else "colors", // as "colorStops" is vararg, it can't be named
+            if (hasStops) {
+                stops!!.zip(colors) { stop, color -> stop to color }.toTypedArray() // vararg
+            } else colors
         ),
-        *gradient.propertiesAsNameValuePairs { props -> props.subList(2) }
+        *gradient.propertiesAsOrderedNameValuePairs { propertyName ->
+            propertyName != "colors" && propertyName != "stops"
+        }
     )
 }
 
-private inline fun <reified T : Any> T.propertiesAsNameValuePairs(
-    noinline filter: ((List<KProperty1<T, *>>) -> List<KProperty1<T, *>>)? = null
-) = T::class.memberProperties
-    .let { props -> filter?.invoke(props.toList()) ?: props }
-    .map { prop -> prop.name to prop.get(this)!! }
-    .toTypedArray()
+private fun Array<Pair<String, *>>.values() = map { (_, value) -> value }.toTypedArray()
 
-private fun KCallable<*>.asMemberName() = MemberName(javaClass.packageName, name)
+// TODO: take some time to reflect on this mess?
+private inline fun <reified T : Any> T.propertiesAsOrderedNameValuePairs(
+    targetCallable: KCallable<*>? = null,
+    nameFilter: (String) -> Boolean = { true }
+): Array<Pair<String, *>> {
+    @Suppress("UNCHECKED_CAST")
+    val clazz =
+        if (T::class.isSealed) T::class.sealedSubclasses.single { this::class == it } as KClass<T>
+        else T::class
+    val sourceProperties = clazz.declaredMemberProperties
+        .map { property -> property.name to property.apply { isAccessible = true }.get(this) }
+        .filter { (name, _) -> nameFilter(name) }
+
+    val targetParameters = (targetCallable ?: clazz.primaryConstructor!!).valueParameters
+    val unmappedTargetParameterNames = ArrayList<String>(targetParameters.size)
+    val mappedTargetParameterNames = ArrayList<String>(targetParameters.size)
+    for (parameter in targetParameters) {
+        val unmappedParameterName = parameter.name!!
+        // the parameter names must match the source properties' so we can compare them later on
+        val mappedParameterName =
+            KNOWN_PARAMETER_NAMES_WITH_DIFFERENT_PROPERTY_NAME[unmappedParameterName]
+                ?: unmappedParameterName
+        if (nameFilter(mappedParameterName)) {
+            unmappedTargetParameterNames += unmappedParameterName
+            mappedTargetParameterNames += mappedParameterName
+        }
+    }
+
+    val sizeDifference = sourceProperties.size - mappedTargetParameterNames.size
+    if (sizeDifference != 0) {
+        throw RuntimeException(
+            "propertiesAsOrderedNameValuePairs:" +
+                    " [target: ${targetCallable?.name ?: clazz.simpleName}]" +
+                    System.lineSeparator() + "  The source's property list contains " +
+                    (if (sizeDifference > 0) "more" else "less") +
+                    " elements than the target's parameter list! Is `nameFilter` exhaustive?"
+        )
+    }
+
+    return sourceProperties.mapIndexed { index, _ ->
+        val nameToFind = mappedTargetParameterNames[index]
+        sourceProperties.find { (name, _) -> nameToFind == name }
+            // use the "original" parameter name in the result; in other words, reverse the mapping
+            ?.let { (_, value) -> unmappedTargetParameterNames[index] to value }
+            ?: throw NoSuchElementException(
+                "propertiesAsOrderedNameValuePairs:" +
+                        " [target: ${targetCallable?.name ?: clazz.simpleName} |" +
+                        " name: $nameToFind]" + System.lineSeparator() +
+                        "  Forgot to define a \"target parameter -> source property\" mapping?"
+            )
+    }.toTypedArray()
+}
 
 private fun <T> Collection<KProperty1<T, *>>.firstWithName(name: String) =
-    first { prop -> prop.name == name }
-
-private fun <T> List<T>.subList(fromIndex: Int) = subList(fromIndex, size)
+    first { it.name == name }.apply { isAccessible = true }
 
 private val KNOWN_PARAMETERS_WITH_DEFAULT_VALUES =
     hashMapOf(
         "name" to DefaultGroupName,
         "rotate" to DefaultRotation,
         "pivotX" to DefaultPivotX,
-        "pivotY" to DefaultScaleY,
+        "pivotY" to DefaultPivotY,
         "scaleX" to DefaultScaleX,
         "scaleY" to DefaultScaleY,
         "translationX" to DefaultTranslationX,
         "translationY" to DefaultTranslationY,
         "clipPathData" to EmptyPath,
+        "pathFillType" to PathFillType.NonZero,
         "fill" to null,
         "fillAlpha" to DefaultAlpha,
         "stroke" to null,
@@ -284,11 +400,50 @@ private val KNOWN_PARAMETERS_WITH_DEFAULT_VALUES =
         "strokeLineCap" to DefaultStrokeLineCap,
         "strokeLineJoin" to DefaultStrokeLineJoin,
         "strokeLineMiter" to DefaultStrokeLineMiter,
+        "trimPathStart" to DefaultTrimPathStart,
+        "trimPathEnd" to DefaultTrimPathEnd,
+        "trimPathOffset" to DefaultTrimPathOffset,
         "start" to Offset.Zero,
         "end" to Offset.Infinite,
         "tileMode" to TileMode.Clamp,
         "center" to Offset.Unspecified,
         "radius" to Float.POSITIVE_INFINITY
     )
+
+private val KNOWN_PARAMETER_NAMES_WITH_DIFFERENT_PROPERTY_NAME =
+    hashMapOf(
+        "rotate" to "rotation",
+        "block" to "children",
+        "pathBuilder" to "pathData",
+        "x1" to "arcStartX",
+        "y1" to "arcStartY",
+        "a" to "horizontalEllipseRadius",
+        "b" to "verticalEllipseRadius",
+        "dx1" to "arcStartDx",
+        "dy1" to "arcStartDy"
+    )
+
+private fun getDslExtensionFunctionForPathNode(node: PathNode): KFunction<PathBuilder> =
+    when (node) {
+        PathNode.Close -> PathBuilder::close
+        is PathNode.RelativeMoveTo -> PathBuilder::moveToRelative
+        is PathNode.MoveTo -> PathBuilder::moveTo
+        is PathNode.RelativeLineTo -> PathBuilder::lineToRelative
+        is PathNode.LineTo -> PathBuilder::lineTo
+        is PathNode.RelativeHorizontalTo -> PathBuilder::horizontalLineToRelative
+        is PathNode.HorizontalTo -> PathBuilder::horizontalLineTo
+        is PathNode.RelativeVerticalTo -> PathBuilder::verticalLineToRelative
+        is PathNode.VerticalTo -> PathBuilder::verticalLineTo
+        is PathNode.RelativeCurveTo -> PathBuilder::curveToRelative
+        is PathNode.CurveTo -> PathBuilder::curveTo
+        is PathNode.RelativeReflectiveCurveTo -> PathBuilder::reflectiveCurveToRelative
+        is PathNode.ReflectiveCurveTo -> PathBuilder::reflectiveCurveTo
+        is PathNode.RelativeQuadTo -> PathBuilder::quadToRelative
+        is PathNode.QuadTo -> PathBuilder::quadTo
+        is PathNode.RelativeReflectiveQuadTo -> PathBuilder::reflectiveQuadToRelative
+        is PathNode.ReflectiveQuadTo -> PathBuilder::reflectiveQuadTo
+        is PathNode.RelativeArcTo -> PathBuilder::arcToRelative
+        is PathNode.ArcTo -> PathBuilder::arcTo
+    }
 
 // endregion

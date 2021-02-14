@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Providers
 import androidx.compose.runtime.ambientOf
@@ -124,7 +124,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                             colorFilter = ColorFilter.tint(MaterialTheme.colors.onBackground)
                         )
                         PreviewSelectionButton(
-                            icon = Icons.Outlined.ArrowBack,
+                            icon = Icons.Outlined.KeyboardArrowLeft,
                             onClick = {
                                 bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
                             },
@@ -132,7 +132,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                             isEnabled = state.isPreviousPreviewButtonEnabled
                         )
                         PreviewSelectionButton(
-                            icon = Icons.Outlined.ArrowForward,
+                            icon = Icons.Outlined.KeyboardArrowRight,
                             onClick = {
                                 bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
                             },
