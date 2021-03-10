@@ -10,7 +10,8 @@ sealed class MainWindowEvent {
     class SourceFilesSelected(val files: Collection<File>) : MainWindowEvent()
 
     class SourceFilesParsed(
-        val imageVectorsAndErrorMessages: Pair<List<ImageVector?>, List<String>>
+        val imageVectors: List<ImageVector?>,
+        val errorMessages: List<String>
     ) : MainWindowEvent()
 
     class DestinationDirectorySelected(val directory: File) : MainWindowEvent()
@@ -22,4 +23,8 @@ sealed class MainWindowEvent {
     object NextPreviewButtonClicked : MainWindowEvent()
 
     object ConvertButtonClicked : MainWindowEvent()
+
+    class SnackbarActionButtonClicked(val snackbarId: Int) : MainWindowEvent()
+
+    object ErrorMessagesDialogDismissed : MainWindowEvent()
 }

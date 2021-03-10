@@ -37,23 +37,23 @@ class CliToolCommunicationTest {
                             .setName("test_vector")
                             .setViewportWidth(100F).setViewportHeight(50F)
                             .setWidth(100F).setHeight(50F)
-                            .setGroup(
-                                _pb.VectorGroup.newBuilder()
-                                    .setId("test_group")
-                                    .setRotation(270F).setPivotX(25F).setPivotY(25F)
-                                    .setScaleX(1.5F).setScaleY(1.5F)
-                                    .setTranslationX(10F).setTranslationY(20F)
-                                    .addClipPathData(
-                                        _pb.PathNode.newBuilder()
-                                            .setCommand(_pb.PathNode.Command.VERTICAL_LINE_TO)
-                                            .addArguments(
-                                                _pb.PathNode.Argument.newBuilder()
-                                                    .setCoordinate(75F)
-                                            )
-                                    )
-                                    .addNodes(
-                                        _pb.VectorNode.newBuilder()
-                                            .setPath(
+                            .addNodes(
+                                _pb.VectorNode.newBuilder().setGroup(
+                                    _pb.VectorGroup.newBuilder()
+                                        .setId("test_group")
+                                        .setRotation(270F).setPivotX(25F).setPivotY(25F)
+                                        .setScaleX(1.5F).setScaleY(1.5F)
+                                        .setTranslationX(10F).setTranslationY(20F)
+                                        .addClipPathData(
+                                            _pb.PathNode.newBuilder()
+                                                .setCommand(_pb.PathNode.Command.VERTICAL_LINE_TO)
+                                                .addArguments(
+                                                    _pb.PathNode.Argument.newBuilder()
+                                                        .setCoordinate(75F)
+                                                )
+                                        )
+                                        .addNodes(
+                                            _pb.VectorNode.newBuilder().setPath(
                                                 _pb.VectorPath.newBuilder()
                                                     .setId("test_path")
                                                     .addPathNodes(
@@ -77,8 +77,10 @@ class CliToolCommunicationTest {
                                                                     .addStops(0.2F)
                                                                     .addStops(0.5F)
                                                                     .addStops(0.8F)
-                                                                    .setStartX(10F).setStartY(90F)
-                                                                    .setEndX(20F).setEndY(80F)
+                                                                    .setStartX(10F)
+                                                                    .setStartY(90F)
+                                                                    .setEndX(20F)
+                                                                    .setEndY(80F)
                                                                     .setTileMode(
                                                                         _pb.Gradient.TileMode.CLAMP
                                                                     )
@@ -100,7 +102,8 @@ class CliToolCommunicationTest {
                                                     .setStrokeLineMiter(0.6F)
                                                     .setFillType(_pb.VectorPath.FillType.NON_ZERO)
                                             )
-                                    )
+                                        )
+                                )
                             )
                     )
             ).build()

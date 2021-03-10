@@ -4,6 +4,7 @@ import androidx.compose.desktop.AppWindowAmbient
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Providers
 import androidx.compose.runtime.ambientOf
 import androidx.compose.runtime.collectAsState
@@ -19,39 +21,63 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.asFontFamily
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.platform.font
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DesktopDialogProperties
+import androidx.compose.ui.window.Dialog
 import com.amarland.svg2iv.MainWindowBloc
+import com.amarland.svg2iv.MainWindowEffect
 import com.amarland.svg2iv.MainWindowEvent
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
 import com.amarland.svg2iv.outerworld.openFileChooser
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
-private val androidGreen = Color(0xFF00DE7A)
-private val androidBlue = Color(0xFF2196F3)
+private val ANDROID_GREEN = Color(0xFF00DE7A)
+private val ANDROID_BLUE = Color(0xFF2196F3)
 
-@ObsoleteCoroutinesApi
+private val JETBRAINS_MONO: FontFamily =
+    font(alias = "JetBrains Mono Regular", path = "font/jetbrains_mono_regular.ttf").asFontFamily()
+
 private val BlocAmbient = ambientOf<MainWindowBloc>()
-
-private val ScaffoldStateAmbient = ambientOf<ScaffoldState>()
 
 @Composable
 @ExperimentalCoroutinesApi
 @ExperimentalLayout
 @ExperimentalMaterialApi
-@ObsoleteCoroutinesApi
 @Suppress("FunctionName")
 fun MainWindowContent(bloc: MainWindowBloc) {
     val state = bloc.state.collectAsState().value
 
     MaterialTheme(
         colors = if (state.isThemeDark) {
-            darkColors(primary = androidGreen, secondary = androidBlue)
+            darkColors(primary = ANDROID_GREEN, secondary = ANDROID_BLUE)
         } else {
-            lightColors(primary = androidBlue, secondary = androidGreen)
+            lightColors(primary = ANDROID_BLUE, secondary = ANDROID_GREEN)
         }
     ) {
         Column {
+            if (state.areErrorMessagesShown) {
+                Dialog(
+                    onDismissRequest = {
+                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogDismissed)
+                    },
+                    properties = DesktopDialogProperties(size = IntSize(550, 350))
+                ) {
+                    LazyColumn(modifier = Modifier.padding(16.dp)) {
+                        items(state.errorMessages) { line ->
+                            Text(line, fontFamily = JETBRAINS_MONO)
+                        }
+                    }
+                }
+            }
+
             TopAppBar(
                 title = { Text("SVG to ImageVector conversion tool") },
                 actions = {
@@ -63,13 +89,11 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                     ) { Icon(imageVector = Icons.Outlined.Info) }
                 }
             )
+
             Row(modifier = Modifier.background(color = MaterialTheme.colors.background)) {
                 val scaffoldState = rememberScaffoldState()
 
-                Providers(
-                    BlocAmbient provides bloc,
-                    ScaffoldStateAmbient provides scaffoldState
-                ) {
+                Providers(BlocAmbient provides bloc) {
                     // not an absolute necessity, but makes handling Snackbars easier,
                     // and allows "customization" of their width without visual "glitches",
                     // although it might just be me who hasn't figured out how to achieve this
@@ -77,6 +101,12 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
                         scaffoldState = scaffoldState
                     ) {
+                        LaunchedEffect(bloc) {
+                            bloc.effects.onEach { effect ->
+                                launchEffect(effect, bloc, scaffoldState)
+                            }.launchIn(this)
+                        }
+
                         Column(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.Center
@@ -119,7 +149,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            imageVector = state.preview,
+                            imageVector = state.imageVectors[state.currentPreviewIndex],
                             modifier = Modifier.fillMaxSize(0.7F),
                             colorFilter = ColorFilter.tint(MaterialTheme.colors.onBackground)
                         )
@@ -160,7 +190,7 @@ private fun PreviewSelectionButton(
     modifier: Modifier,
     isEnabled: Boolean
 ) {
-    OutlinedButton(
+    Button(
         onClick = onClick,
         modifier = modifier.preferredSize(48.dp),
         enabled = isEnabled,
@@ -172,7 +202,6 @@ private fun PreviewSelectionButton(
 }
 
 @Composable
-@ObsoleteCoroutinesApi
 @Suppress("FunctionName")
 private fun FileSystemEntitySelectionField(
     mode: FileSystemEntitySelectionMode,
@@ -194,7 +223,7 @@ private fun FileSystemEntitySelectionField(
         }
 
         OutlinedTextField(
-            value = value,
+            value = TextFieldValue(value, selection = TextRange(value.length)),
             onValueChange = { /* it is read-only, we have control over the value */ },
             modifier = Modifier.weight(1F),
             readOnly = true,
@@ -230,16 +259,20 @@ private fun FileSystemEntitySelectionField(
     }
 }
 
-/*
-@Composable
 @ExperimentalMaterialApi
-suspend fun launchEffect(effect: MainWindowEffect) {
+suspend fun launchEffect(
+    effect: MainWindowEffect,
+    bloc: MainWindowBloc,
+    scaffoldState: ScaffoldState
+) {
     when (effect) {
-        is ShowSnackbar -> {
-            val (message, actionLabel, duration) = effect
-            ScaffoldStateAmbient.current.snackbarHostState
-                .showSnackbar(message, actionLabel, duration)
+        is MainWindowEffect.ShowSnackbar -> {
+            val (snackbarId, message, actionLabel, duration) = effect
+            scaffoldState.snackbarHostState.showSnackbar(message, actionLabel, duration)
+                .also { result ->
+                    if (result == SnackbarResult.ActionPerformed)
+                        bloc.addEvent(MainWindowEvent.SnackbarActionButtonClicked(snackbarId))
+                }
         }
     }
 }
-*/

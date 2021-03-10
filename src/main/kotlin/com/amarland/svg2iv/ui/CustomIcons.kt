@@ -141,68 +141,6 @@ object CustomIcons {
             }
         }
 
-    val Polygon =
-        materialIcon("Polygon") {
-            materialPath {
-                moveTo(2F, 2F)
-                verticalLineTo(8F)
-                horizontalLineTo(4.28F)
-                lineTo(5.57F, 16F)
-                horizontalLineTo(4F)
-                verticalLineTo(22F)
-                horizontalLineTo(10F)
-                verticalLineTo(20.06F)
-                lineTo(15F, 20.05F)
-                verticalLineTo(22F)
-                horizontalLineTo(21F)
-                verticalLineTo(16F)
-                horizontalLineTo(19.17F)
-                lineTo(20F, 9F)
-                horizontalLineTo(22F)
-                verticalLineTo(3F)
-                horizontalLineTo(16F)
-                verticalLineTo(6.53F)
-                lineTo(14.8F, 8F)
-                horizontalLineTo(9.59F)
-                lineTo(8F, 5.82F)
-                verticalLineTo(2F)
-                moveTo(4F, 4F)
-                horizontalLineTo(6F)
-                verticalLineTo(6F)
-                horizontalLineTo(4F)
-                moveTo(18F, 5F)
-                horizontalLineTo(20F)
-                verticalLineTo(7F)
-                horizontalLineTo(18F)
-                moveTo(6.31F, 8F)
-                horizontalLineTo(7.11F)
-                lineTo(9F, 10.59F)
-                verticalLineTo(14F)
-                horizontalLineTo(15F)
-                verticalLineTo(10.91F)
-                lineTo(16.57F, 9F)
-                horizontalLineTo(18F)
-                lineTo(17.16F, 16F)
-                horizontalLineTo(15F)
-                verticalLineTo(18.06F)
-                horizontalLineTo(10F)
-                verticalLineTo(16F)
-                horizontalLineTo(7.6F)
-                moveTo(11F, 10F)
-                horizontalLineTo(13F)
-                verticalLineTo(12F)
-                horizontalLineTo(11F)
-                moveTo(6F, 18F)
-                horizontalLineTo(8F)
-                verticalLineTo(2F)
-                horizontalLineTo(6F)
-                moveTo(17F, 18F)
-                horizontalLineTo(19F)
-                verticalLineTo(20F)
-                horizontalLineTo(17F)
-            }
-        }
-
     val SourceFiles =
         materialIcon("SourceFiles") {
             materialPath {
@@ -247,7 +185,6 @@ object CustomIcons {
     val ToggleTheme =
         materialIcon("ToggleTheme") {
             materialPath {
-                // L18.94,9.64L22.28,9.88L20.08,12.42M9.63,18.93L12.4,20.08L9.87,22.27L9.63,18.93Z
                 moveTo(7.5F, 2F)
                 curveTo(5.71F, 3.15F, 4.5F, 5.18F, 4.5F, 7.5F)
                 curveTo(4.5F, 9.82F, 5.71F, 11.85F, 7.53F, 13F)

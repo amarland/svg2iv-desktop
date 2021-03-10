@@ -8,15 +8,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.vector.DefaultFillType
-import androidx.compose.ui.graphics.vector.DefaultGroupName
-import androidx.compose.ui.graphics.vector.DefaultPathName
-import androidx.compose.ui.graphics.vector.DefaultStrokeLineCap
-import androidx.compose.ui.graphics.vector.DefaultStrokeLineJoin
-import androidx.compose.ui.graphics.vector.EmptyPath
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathNode
-import androidx.compose.ui.graphics.vector.group
+import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,6 +16,7 @@ import java.io.File
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.net.SocketTimeoutException
 import com.amarland.svg2iv.outerworld.ProtobufImageVector as _pb
 
 @Suppress("BlockingMethodInNonBlockingContext") // TODO: use ServerSocketChannel?
@@ -45,7 +38,9 @@ suspend fun callCliTool(
     require(sourceFiles.isNotEmpty())
 
     return withContext(Dispatchers.IO) {
-        val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress()).apply {
+            soTimeout = 3000
+        }
         val process = startProcess(
             sourceFiles,
             extensionReceiver,
@@ -53,20 +48,24 @@ suspend fun callCliTool(
             serverSocket.localPort
         )
 
-        val imageVectors: List<ImageVector?>
+        val imageVectors = ArrayList<ImageVector?>()
         val errorMessages =
             process.errorStream.bufferedReader().readLines() // uses `use` internally
 
-        serverSocket.use { server ->
-            server.accept().use { client ->
+        try {
+            serverSocket.accept().use { client ->
                 client.getInputStream().use { stream ->
-                    imageVectors = _pb.ImageVectorCollection
+                    imageVectors += _pb.ImageVectorCollection
                         // "Despite usually reading the entire input,
                         // this does not close the stream."
                         .parseFrom(stream)
                         .toComposeModels()
                 }
             }
+        } catch (e: SocketTimeoutException) {
+            // do nothing?
+        } finally {
+            serverSocket.close()
         }
 
         process.waitFor()
@@ -89,13 +88,14 @@ private fun startCliToolProcess(
         ?.toLowerCase()
         ?.startsWith("windows")
         ?: false
-    val shellInvocation = if (isOSWindows) "cmd.exe /c" else "sh -c"
-    return Runtime.getRuntime().exec(
-        shellInvocation + "svg2iv" +
-                " -r " + extensionReceiver.orEmpty() +
-                " -s " + serverSocketAddress.hostAddress + ":" + serverSocketPort +
-                " " + sourceFiles.joinToString(" ") { it.absolutePath }
-    )
+    val shellInvocation = if (isOSWindows) "cmd.exe /c" else "sh"
+    val commandOption = if (isOSWindows) "/c" else "-c"
+    val executableName = "svg2iv.exe"
+    val command = (if (File(executableName).exists()) "./$executableName" else executableName) +
+            (if (extensionReceiver.isNullOrEmpty()) "" else " -r $extensionReceiver") +
+            " -s ${serverSocketAddress.hostAddress}:$serverSocketPort" +
+            " " + sourceFiles.joinToString(" ") { it.absolutePath }
+    return Runtime.getRuntime().exec(arrayOf(shellInvocation, commandOption, command))
 }
 
 private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
@@ -110,12 +110,22 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
                     viewportWidth = imageVector.width,
                     viewportHeight = imageVector.height
                 )
-                    .addGroup(imageVector.group)
+                    .addNodes(imageVector.nodesList)
                     .build()
             }
             else -> null
         }
     }
+}
+
+private fun ImageVector.Builder.addNodes(nodes: Iterable<_pb.VectorNode>): ImageVector.Builder {
+    for (node in nodes) {
+        when (node.nodeCase) {
+            _pb.VectorNode.NodeCase.GROUP -> addGroup(node.group)
+            else -> addPath(node.path)
+        }
+    }
+    return this
 }
 
 private fun ImageVector.Builder.addGroup(group: _pb.VectorGroup): ImageVector.Builder {
@@ -133,12 +143,7 @@ private fun ImageVector.Builder.addGroup(group: _pb.VectorGroup): ImageVector.Bu
             ?.mapNotNull(::mapPathNode)
             ?: EmptyPath
     ) {
-        for (node in group.nodesList) {
-            when (node.nodeCase) {
-                _pb.VectorNode.NodeCase.GROUP -> addGroup(node.group)
-                else -> addPath(node.path)
-            }
-        }
+        addNodes(group.nodesList)
     }
     return this
 }

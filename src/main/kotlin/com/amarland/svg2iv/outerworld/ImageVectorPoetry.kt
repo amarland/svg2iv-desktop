@@ -5,11 +5,8 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Dp
 import com.squareup.kotlinpoet.CodeBlock
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.asClassName
+import java.io.File
+import java.io.IOException
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -19,76 +16,94 @@ import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.valueParameters
 import kotlin.reflect.jvm.isAccessible
 
-private const val DEFAULT_IMAGE_VECTOR_NAME = "\u200B"
+private const val DEFAULT_IMAGE_VECTOR_NAME = "\u200B" // zero-width space
 
+@Throws(IOException::class)
 fun writeImageVectorsToFile(
     destinationPath: String,
     imageVectors: Iterable<ImageVector>,
     extensionReceiver: String? = null
 ) {
-    TODO()
+    fun String.lastIndexOfOrNull(char: Char) = lastIndexOf(char).takeUnless { it == -1 }
+
+    val file = File(if (destinationPath.endsWith(".kt")) destinationPath else "$destinationPath.kt")
+    val filePathSeparator = File.separatorChar
+    val absoluteFilePath = file.absolutePath
+    val startOfPackageName =
+        Regex("src\\$filePathSeparator(java|kotlin)\\$filePathSeparator")
+            .find(absoluteFilePath)
+            ?.range
+            ?.endInclusive
+            ?.plus(1)
+    val packageName = if (startOfPackageName == null) "<package>" else {
+        val endOfPackageName =
+            absoluteFilePath.lastIndexOfOrNull('.')
+                ?: absoluteFilePath.lastIndexOfOrNull(filePathSeparator)
+                ?: absoluteFilePath.length
+        absoluteFilePath.substring(startOfPackageName, endOfPackageName)
+    }
+    val contents = with(StringBuilder()) {
+        appendLine("package $packageName")
+        appendLine()
+        appendLine("androidx.compose.ui.graphics.*")
+        appendLine("androidx.compose.ui.unit.dp")
+        appendLine()
+        for (imageVector in imageVectors) {
+            append(getCodeBlockForImageVector(imageVector, extensionReceiver))
+        }
+    }.toString()
+    file.writeText(contents)
 }
 
-fun FileSpec.Builder.addImageVector(
+fun getCodeBlockForImageVector(
     imageVector: ImageVector,
     extensionReceiver: String? = null
-): FileSpec.Builder {
+): CodeBlock {
+    val extensionReceiverDeclaration = extensionReceiver?.plus(".") ?: ""
     val backingPropertyName = "_${imageVector.name.decapitalize()}"
     val publicPropertyName = imageVector.name
-    val imageVectorClassName = ImageVector::class.asClassName()
 
-    addProperty(
-        PropertySpec.builder(backingPropertyName, imageVectorClassName.copy(nullable = true))
-            .mutable()
-            .addModifiers(KModifier.PRIVATE)
-            .initializer("null")
-            .build()
-    )
-    addProperty(
-        PropertySpec.builder(publicPropertyName, imageVectorClassName)
-            .getter(
-                FunSpec.getterBuilder()
-                    .addCode(
-                        CodeBlock.builder()
-                            .add("$backingPropertyName ?: run {")
-                            .addLineSeparator()
-                            .indentFourSpaces()
-                            .add(
-                                CodeBlock.builder()
-                                    .addMemberCall(
-                                        "ImageVector.Builder",
-                                        Pair(
-                                            "name",
-                                            // "bypass" KNOWN_PARAMETERS_WITH_DEFAULT_VALUES
-                                            imageVector.name.takeUnless { it == DefaultGroupName }
-                                                ?: DEFAULT_IMAGE_VECTOR_NAME
-                                        ),
-                                        *imageVector.propertiesAsOrderedNameValuePairs(
-                                            targetCallable = ImageVector.Builder::class
-                                                .primaryConstructor!!
-                                        ) { propertyName ->
-                                            !propertyName.startsWith("default") &&
-                                                    !propertyName.startsWith("viewport")
-                                        }
-                                    )
-                                    .build()
-                            )
-                            .addLineSeparator()
-                            .indentFourSpaces()
-                            .add(".")
-                            .add(getCodeBlockForGroup(imageVector.root))
-                            .add(".build()")
-                            .addLineSeparator()
-                            .unindentFourSpaces()
-                            .add("}")
-                            .addLineSeparator()
-                            .build()
-                    )
-                    .build()
-            ).build()
-    )
-
-    return this
+    return CodeBlock.builder()
+        .add("private var $backingPropertyName: ImageVector? = null")
+        .addLineSeparator()
+        .addLineSeparator()
+        .add("val $extensionReceiverDeclaration$publicPropertyName: ImageVector")
+        .addLineSeparator()
+        .indentFourSpaces()
+        .add("get() {")
+        .addLineSeparator()
+        .indentFourSpaces()
+        .add("if ($backingPropertyName == null) {")
+        .addLineSeparator()
+        .indentFourSpaces()
+        .addMemberCall(
+            "$backingPropertyName = ImageVector.Builder",
+            Pair(
+                "name",
+                // "bypass" KNOWN_PARAMETERS_WITH_DEFAULT_VALUES
+                imageVector.name.takeUnless { it == DefaultGroupName } ?: DEFAULT_IMAGE_VECTOR_NAME
+            ),
+            *imageVector.propertiesAsOrderedNameValuePairs(
+                targetCallable = ImageVector.Builder::class.primaryConstructor!!
+            ) { propertyName ->
+                !propertyName.startsWith("default") && !propertyName.startsWith("viewport")
+            }
+        )
+        .addLineSeparator()
+        .add(".")
+        .add(getCodeBlockForGroup(imageVector.root))
+        .add(".build()")
+        .addLineSeparator()
+        .unindentFourSpaces()
+        .add("}")
+        .addLineSeparator()
+        .unindentFourSpaces()
+        .add("return $backingPropertyName")
+        .addLineSeparator()
+        .unindentFourSpaces()
+        .add("}")
+        .addLineSeparator()
+        .build()
 }
 
 fun getCodeBlockForGroup(group: VectorGroup): CodeBlock =

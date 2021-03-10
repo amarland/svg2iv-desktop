@@ -1,7 +1,8 @@
 package com.amarland.svg2iv
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.amarland.svg2iv.ui.CustomIcons
 
 data class MainWindowState(
     val isThemeDark: Boolean,
@@ -9,7 +10,10 @@ data class MainWindowState(
     val destinationDirectorySelectionTextFieldState: TextFieldState,
     val extensionReceiverTextFieldState: TextFieldState,
     val isAllInOneCheckboxChecked: Boolean,
-    val preview: ImageVector,
+    val imageVectors: List<ImageVector>,
+    val errorMessages: List<String>,
+    val areErrorMessagesShown: Boolean,
+    val currentPreviewIndex: Int,
     val isPreviousPreviewButtonEnabled: Boolean,
     val isNextPreviewButtonEnabled: Boolean
 ) {
@@ -23,7 +27,10 @@ data class MainWindowState(
             destinationDirectorySelectionTextFieldState = TextFieldState.DEFAULT,
             extensionReceiverTextFieldState = TextFieldState.DEFAULT,
             isAllInOneCheckboxChecked = false,
-            preview = CustomIcons.Polygon,
+            imageVectors = listOf(Icons.Outlined.Face),
+            errorMessages = emptyList(),
+            areErrorMessagesShown = false,
+            currentPreviewIndex = 0,
             isPreviousPreviewButtonEnabled = false,
             isNextPreviewButtonEnabled = false
         )
