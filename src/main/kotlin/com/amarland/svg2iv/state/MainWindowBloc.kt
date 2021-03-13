@@ -1,4 +1,4 @@
-package com.amarland.svg2iv
+package com.amarland.svg2iv.state
 
 import androidx.compose.material.SnackbarDuration
 import com.amarland.svg2iv.outerworld.callCliTool
@@ -8,8 +8,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -28,11 +29,11 @@ class MainWindowBloc {
     init {
         eventSink = Channel(Channel.UNLIMITED)
         coroutineScope.launch {
-            eventSink.consumeAsFlow().collect { event ->
+            eventSink.consumeAsFlow().onEach { event ->
                 val currentState = _state.value
                 mapEventToEffect(event, currentState)?.also { effect -> _effects.send(effect) }
                 mapEventToState(event, currentState).also { state -> _state.value = state }
-            }
+            }.launchIn(coroutineScope)
         }
     }
 
@@ -72,13 +73,15 @@ class MainWindowBloc {
             currentState.copy(
                 sourceFilesSelectionTextFieldState = TextFieldState(
                     value = files.singleOrNull()?.path ?: files.joinToString { it.name },
-                    isErrorValue = files.any { !it.exists() }
+                    isError = files.any { !it.exists() }
                 )
             ).also { parseSourceFiles(files) }
         }
 
         is MainWindowEvent.SourceFilesParsed -> {
             currentState.copy(
+                sourceFilesSelectionTextFieldState = currentState.sourceFilesSelectionTextFieldState
+                    .copy(isError = event.errorMessages.isNotEmpty()),
                 extensionReceiverTextFieldState = currentState.extensionReceiverTextFieldState
                     .copy(placeholder = event.imageVectors.firstOrNull()?.name),
                 imageVectors = event.imageVectors.map { it ?: CustomIcons.ErrorCircle }
@@ -94,7 +97,7 @@ class MainWindowBloc {
             currentState.copy(
                 destinationDirectorySelectionTextFieldState = TextFieldState(
                     value = event.directory.path.orEmpty(),
-                    isErrorValue = !event.directory.exists()
+                    isError = !event.directory.exists()
                 )
             )
 

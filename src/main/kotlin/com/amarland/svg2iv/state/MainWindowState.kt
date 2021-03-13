@@ -1,4 +1,4 @@
-package com.amarland.svg2iv
+package com.amarland.svg2iv.state
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Face
@@ -39,7 +39,7 @@ data class MainWindowState(
 
 data class TextFieldState(
     val value: String,
-    val isErrorValue: Boolean = false,
+    val isError: Boolean = false,
     val placeholder: String? = null
 ) {
 

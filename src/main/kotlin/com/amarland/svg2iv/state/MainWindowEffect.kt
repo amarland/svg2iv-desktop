@@ -1,4 +1,4 @@
-package com.amarland.svg2iv
+package com.amarland.svg2iv.state
 
 import androidx.compose.material.SnackbarDuration
 

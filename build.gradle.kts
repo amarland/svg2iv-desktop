@@ -3,9 +3,9 @@ import com.google.protobuf.gradle.protoc
 import org.jetbrains.compose.compose
 
 plugins {
-    kotlin("jvm") version "1.4.21"
-    id("org.jetbrains.compose") version "0.3.0-build139"
-    id("com.google.protobuf") version "0.8.14"
+    kotlin("jvm") version "1.4.31"
+    id("org.jetbrains.compose") version "0.4.0-build173"
+    id("com.google.protobuf") version "0.8.15"
 }
 
 repositories {
@@ -16,8 +16,9 @@ repositories {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("com.google.protobuf:protobuf-java:3.14.0")
+    implementation("com.google.protobuf:protobuf-java:3.15.6")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3")
     implementation("com.squareup:kotlinpoet:1.7.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
@@ -40,7 +41,7 @@ compose.desktop {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.8.0"
+        artifact = "com.google.protobuf:protoc:3.15.6"
     }
 }
 

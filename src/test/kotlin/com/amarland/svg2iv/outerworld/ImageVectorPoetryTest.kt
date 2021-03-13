@@ -196,7 +196,6 @@ class ImageVectorPoetryTest {
             |    arcTo(2.34F, 2.34F, 0F, false, false, 9.72F, 10.93F)
             |    close()""".trimMargin()
 
-        @JvmStatic
         private fun buildVectorPath(
             name: String = DefaultPathName,
             pathFillType: PathFillType = DefaultFillType,

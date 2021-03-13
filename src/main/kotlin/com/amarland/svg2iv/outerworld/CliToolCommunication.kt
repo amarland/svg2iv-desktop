@@ -10,10 +10,12 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.dp
+import com.amarland.svg2iv.util.RingBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.io.Reader
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.SocketTimeoutException
@@ -49,8 +51,9 @@ suspend fun callCliTool(
         )
 
         val imageVectors = ArrayList<ImageVector?>()
-        val errorMessages =
-            process.errorStream.bufferedReader().readLines() // uses `use` internally
+        val errorMessages = process.errorStream
+            .bufferedReader()
+            .readLines(to = RingBuffer.create(50)) // uses `use` internally
 
         try {
             serverSocket.accept().use { client ->
@@ -117,6 +120,9 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
         }
     }
 }
+
+private fun Reader.readLines(to: MutableList<String>): List<String> =
+    to.apply { forEachLine { add(it) } }
 
 private fun ImageVector.Builder.addNodes(nodes: Iterable<_pb.VectorNode>): ImageVector.Builder {
     for (node in nodes) {
