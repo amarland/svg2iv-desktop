@@ -143,11 +143,16 @@ class MainWindowBloc {
     private fun parseSourceFiles(files: Collection<File>) {
         coroutineScope.launch {
             try {
-                callCliTool(files)
+                callCliTool(files).also { (imageVectors, errorMessages) ->
+                    addEvent(MainWindowEvent.SourceFilesParsed(imageVectors, errorMessages))
+                }
             } catch (e: Exception) {
-                TODO()
-            }.also { (imageVectors, errorMessages) ->
-                addEvent(MainWindowEvent.SourceFilesParsed(imageVectors, errorMessages))
+                addEvent(
+                    MainWindowEvent.SourceFilesParsed(
+                        emptyList(),
+                        e.stackTraceToString().lines()
+                    )
+                )
             }
         }
     }

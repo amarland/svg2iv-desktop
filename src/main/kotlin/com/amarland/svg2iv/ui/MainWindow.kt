@@ -1,6 +1,7 @@
 package com.amarland.svg2iv.ui
 
 import androidx.compose.desktop.LocalAppWindow
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,8 +20,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
@@ -150,11 +152,12 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                             .padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        val previewSizeFraction = 0.65F
+                        Checkerboard(Modifier.fillMaxSize(previewSizeFraction))
                         Image(
                             imageVector = state.imageVectors[state.currentPreviewIndex],
                             contentDescription = null,
-                            modifier = Modifier.fillMaxSize(0.7F),
-                            colorFilter = ColorFilter.tint(MaterialTheme.colors.onBackground)
+                            modifier = Modifier.fillMaxSize(previewSizeFraction)
                         )
                         PreviewSelectionButton(
                             icon = Icons.Outlined.KeyboardArrowLeft,
@@ -267,8 +270,43 @@ private fun FileSystemEntitySelectionField(
     }
 }
 
+@Composable
+private fun Checkerboard(
+    modifier: Modifier,
+    squareColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.12F)
+) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val squareSizeInDp = 8
+        val maxWidth = constraints.maxWidth
+        val maxHeight = constraints.maxHeight
+        Canvas(
+            modifier = Modifier.size(
+                width = (maxWidth - maxWidth % squareSizeInDp).dp,
+                height = (maxHeight - maxHeight % squareSizeInDp).dp
+            )
+        ) {
+            val squareSizeInPixels = squareSizeInDp.dp.toPx()
+            var x = 0F
+            var y = 0F
+            while (y < size.height) {
+                drawRect(
+                    topLeft = Offset(x, y),
+                    size = Size(squareSizeInPixels, squareSizeInPixels),
+                    color = squareColor,
+                )
+                x = if (x < size.width - squareSizeInPixels * 2) {
+                    x + squareSizeInPixels * 2
+                } else {
+                    (y + squareSizeInPixels) % (squareSizeInPixels * 2)
+                }
+                if (x <= squareSizeInPixels) y += squareSizeInPixels
+            }
+        }
+    }
+}
+
 @ExperimentalMaterialApi
-suspend fun launchEffect(
+private suspend fun launchEffect(
     effect: MainWindowEffect,
     bloc: MainWindowBloc,
     scaffoldState: ScaffoldState
@@ -278,8 +316,9 @@ suspend fun launchEffect(
             val (snackbarId, message, actionLabel, duration) = effect
             scaffoldState.snackbarHostState.showSnackbar(message, actionLabel, duration)
                 .also { result ->
-                    if (result == SnackbarResult.ActionPerformed)
+                    if (result == SnackbarResult.ActionPerformed) {
                         bloc.addEvent(MainWindowEvent.SnackbarActionButtonClicked(snackbarId))
+                    }
                 }
         }
     }
