@@ -4,7 +4,7 @@ import org.jetbrains.compose.compose
 
 plugins {
     kotlin("jvm") version "1.4.31"
-    id("org.jetbrains.compose") version "0.4.0-build173"
+    id("org.jetbrains.compose") version "0.4.0-build175"
     id("com.google.protobuf") version "0.8.15"
 }
 
@@ -18,7 +18,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation("com.google.protobuf:protobuf-java:3.15.6")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.4.3")
     implementation("com.squareup:kotlinpoet:1.7.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")

@@ -38,8 +38,10 @@ import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import java.io.File
 
 private val ANDROID_GREEN = Color(0xFF00DE7A)
@@ -100,7 +102,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                 CompositionLocalProvider(LocalBloc provides bloc) {
                     // not an absolute necessity, but makes handling Snackbars easier,
                     // and allows "customization" of their width without visual "glitches",
-                    // although it might just be me who hasn't figured out how to achieve this
+                    // although it might just be me who couldn't figure out how to achieve this
                     Scaffold(
                         modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
                         scaffoldState = scaffoldState
@@ -248,19 +250,22 @@ private fun FileSystemEntitySelectionField(
         val bloc = LocalBloc.current
         OutlinedButton(
             onClick = {
-                openFileChooser(window, mode).also { files ->
-                    val event = when (mode) {
-                        FileSystemEntitySelectionMode.SOURCE ->
-                            files.takeIf { it.isNotEmpty() }
-                                ?.let { MainWindowEvent.SourceFilesSelected(files.toList()) }
-                        FileSystemEntitySelectionMode.DESTINATION -> {
-                            files.singleOrNull()
-                                ?.let { directory ->
-                                    MainWindowEvent.DestinationDirectorySelected(directory)
-                                }
+                // TODO: fix this ugliness by moving this block to the BLoC (get it?)
+                GlobalScope.launch {
+                    openFileChooser(window, mode).also { files ->
+                        val event = when (mode) {
+                            FileSystemEntitySelectionMode.SOURCE ->
+                                files.takeIf { it.isNotEmpty() }
+                                    ?.let { MainWindowEvent.SourceFilesSelected(files.toList()) }
+                            FileSystemEntitySelectionMode.DESTINATION -> {
+                                files.singleOrNull()
+                                    ?.let { directory ->
+                                        MainWindowEvent.DestinationDirectorySelected(directory)
+                                    }
+                            }
                         }
+                        if (event != null) bloc.addEvent(event)
                     }
-                    if (event != null) bloc.addEvent(event)
                 }
             },
             modifier = Modifier.height(56.dp).padding(start = 8.dp)
@@ -271,6 +276,7 @@ private fun FileSystemEntitySelectionField(
 }
 
 @Composable
+@Suppress("FunctionName")
 private fun Checkerboard(
     modifier: Modifier,
     squareColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.12F)
