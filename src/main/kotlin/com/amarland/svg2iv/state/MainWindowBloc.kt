@@ -9,8 +9,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -29,11 +28,11 @@ class MainWindowBloc {
     init {
         eventSink = Channel(Channel.UNLIMITED)
         coroutineScope.launch {
-            eventSink.consumeAsFlow().onEach { event ->
+            eventSink.consumeAsFlow().collect { event ->
                 val currentState = _state.value
                 mapEventToEffect(event, currentState)?.also { effect -> _effects.send(effect) }
                 mapEventToState(event, currentState).also { state -> _state.value = state }
-            }.launchIn(coroutineScope)
+            }
         }
     }
 
@@ -46,6 +45,12 @@ class MainWindowBloc {
         currentState: MainWindowState
     ): MainWindowEffect? =
         when (event) {
+            MainWindowEvent.SelectSourceFilesButtonClicked ->
+                MainWindowEffect.OpenFileSelectionDialog
+
+            MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
+                MainWindowEffect.OpenDirectorySelectionDialog
+
             is MainWindowEvent.SourceFilesParsed -> {
                 if (event.errorMessages.isNotEmpty()) {
                     MainWindowEffect.ShowSnackbar(
@@ -130,7 +135,7 @@ class MainWindowBloc {
                     currentState.copy(areErrorMessagesShown = true)
 
                 else -> throw IllegalArgumentException(
-                    "Unrecognized snackbarId: ${event.snackbarId}"
+                    "Unrecognized snackbar ID: ${event.snackbarId}"
                 )
             }
 

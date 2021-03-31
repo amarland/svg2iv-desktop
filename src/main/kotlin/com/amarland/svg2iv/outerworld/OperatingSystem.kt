@@ -1,6 +1,9 @@
 package com.amarland.svg2iv.outerworld
 
-fun isOSWindows() = System.getProperty("os.name")
-    ?.toLowerCase()
-    ?.startsWith("windows")
-    ?: false
+private val OS_NAME = System.getProperty("os.name")?.toLowerCase() ?: ""
+
+@JvmField
+val IS_OS_WINDOWS = OS_NAME.startsWith("windows")
+
+@JvmField
+val IS_OS_MACOS = OS_NAME.startsWith("mac")

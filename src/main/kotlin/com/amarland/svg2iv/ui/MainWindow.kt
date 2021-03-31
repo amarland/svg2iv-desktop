@@ -1,5 +1,6 @@
 package com.amarland.svg2iv.ui
 
+import androidx.compose.desktop.ComposeWindow
 import androidx.compose.desktop.LocalAppWindow
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -32,16 +33,13 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
-import com.amarland.svg2iv.outerworld.openFileChooser
+import com.amarland.svg2iv.outerworld.openDirectorySelectionDialog
+import com.amarland.svg2iv.outerworld.openFileSelectionDialog
 import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import java.io.File
 
 private val ANDROID_GREEN = Color(0xFF00DE7A)
@@ -107,10 +105,11 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
                         scaffoldState = scaffoldState
                     ) {
+                        val window = LocalAppWindow.current.window
                         LaunchedEffect(bloc) {
-                            bloc.effects.onEach { effect ->
-                                launchEffect(effect, bloc, scaffoldState)
-                            }.launchIn(this)
+                            bloc.effects.collect { effect ->
+                                launchEffect(effect, bloc, window, scaffoldState)
+                            }
                         }
 
                         Column(
@@ -217,14 +216,14 @@ private fun PreviewSelectionButton(
 @Composable
 @Suppress("FunctionName")
 private fun FileSystemEntitySelectionField(
-    mode: FileSystemEntitySelectionMode,
+    selectionMode: FileSystemEntitySelectionMode,
     value: String,
     isError: Boolean
 ) {
     Row(verticalAlignment = Alignment.Bottom) {
         val label: String
         val leadingIcon: ImageVector
-        when (mode) {
+        when (selectionMode) {
             FileSystemEntitySelectionMode.SOURCE -> {
                 label = "Source file(s)"
                 leadingIcon = CustomIcons.SourceFiles
@@ -246,27 +245,18 @@ private fun FileSystemEntitySelectionField(
             isError = isError
         )
 
-        val window = LocalAppWindow.current.window
         val bloc = LocalBloc.current
         OutlinedButton(
             onClick = {
-                // TODO: fix this ugliness by moving this block to the BLoC (get it?)
-                GlobalScope.launch {
-                    openFileChooser(window, mode).also { files ->
-                        val event = when (mode) {
-                            FileSystemEntitySelectionMode.SOURCE ->
-                                files.takeIf { it.isNotEmpty() }
-                                    ?.let { MainWindowEvent.SourceFilesSelected(files.toList()) }
-                            FileSystemEntitySelectionMode.DESTINATION -> {
-                                files.singleOrNull()
-                                    ?.let { directory ->
-                                        MainWindowEvent.DestinationDirectorySelected(directory)
-                                    }
-                            }
-                        }
-                        if (event != null) bloc.addEvent(event)
+                bloc.addEvent(
+                    when (selectionMode) {
+                        FileSystemEntitySelectionMode.SOURCE ->
+                            MainWindowEvent.SelectSourceFilesButtonClicked
+
+                        FileSystemEntitySelectionMode.DESTINATION ->
+                            MainWindowEvent.SelectDestinationDirectoryButtonClicked
                     }
-                }
+                )
             },
             modifier = Modifier.height(56.dp).padding(start = 8.dp)
         ) {
@@ -285,6 +275,7 @@ private fun Checkerboard(
         val squareSizeInDp = 8
         val maxWidth = constraints.maxWidth
         val maxHeight = constraints.maxHeight
+
         Canvas(
             modifier = Modifier.size(
                 width = (maxWidth - maxWidth % squareSizeInDp).dp,
@@ -294,17 +285,17 @@ private fun Checkerboard(
             val squareSizeInPixels = squareSizeInDp.dp.toPx()
             var x = 0F
             var y = 0F
+
             while (y < size.height) {
                 drawRect(
                     topLeft = Offset(x, y),
                     size = Size(squareSizeInPixels, squareSizeInPixels),
                     color = squareColor,
                 )
-                x = if (x < size.width - squareSizeInPixels * 2) {
-                    x + squareSizeInPixels * 2
-                } else {
-                    (y + squareSizeInPixels) % (squareSizeInPixels * 2)
-                }
+
+                x = if (x < size.width - squareSizeInPixels * 2) x + squareSizeInPixels * 2
+                else (y + squareSizeInPixels) % (squareSizeInPixels * 2)
+
                 if (x <= squareSizeInPixels) y += squareSizeInPixels
             }
         }
@@ -315,17 +306,33 @@ private fun Checkerboard(
 private suspend fun launchEffect(
     effect: MainWindowEffect,
     bloc: MainWindowBloc,
+    window: ComposeWindow,
     scaffoldState: ScaffoldState
 ) {
     when (effect) {
         is MainWindowEffect.ShowSnackbar -> {
             val (snackbarId, message, actionLabel, duration) = effect
-            scaffoldState.snackbarHostState.showSnackbar(message, actionLabel, duration)
-                .also { result ->
-                    if (result == SnackbarResult.ActionPerformed) {
-                        bloc.addEvent(MainWindowEvent.SnackbarActionButtonClicked(snackbarId))
-                    }
-                }
+            val result = scaffoldState.snackbarHostState
+                .showSnackbar(message, actionLabel, duration)
+            snackbarId?.takeIf { result == SnackbarResult.ActionPerformed }
+                ?.let(MainWindowEvent::SnackbarActionButtonClicked)
+                ?.let(bloc::addEvent)
+        }
+
+        is MainWindowEffect.OpenFileSelectionDialog -> {
+            openFileSelectionDialog(window)
+                .takeIf { it.isNotEmpty() }
+                ?.toList()
+                ?.let(MainWindowEvent::SourceFilesSelected)
+                ?.let(bloc::addEvent)
+        }
+
+        is MainWindowEffect.OpenDirectorySelectionDialog -> {
+            openDirectorySelectionDialog(window)
+                ?.let(MainWindowEvent::DestinationDirectorySelected)
+                ?.let(bloc::addEvent)
         }
     }
 }
+
+private enum class FileSystemEntitySelectionMode { SOURCE, DESTINATION }

@@ -87,9 +87,8 @@ private fun startCliToolProcess(
     serverSocketAddress: InetAddress,
     serverSocketPort: Int,
 ): Process {
-    val isOSWindows = isOSWindows()
-    val shellInvocation = if (isOSWindows) "cmd.exe" else "sh"
-    val commandOption = if (isOSWindows) "/c" else "-c"
+    val shellInvocation = if (IS_OS_WINDOWS) "cmd.exe" else "sh"
+    val commandOption = if (IS_OS_WINDOWS) "/c" else "-c"
     val executableName = "svg2iv.exe"
     val executablePath =
         if (File(executableName).exists()) ".${File.separator}$executableName" else executableName

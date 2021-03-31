@@ -11,5 +11,7 @@ sealed class MainWindowEffect {
         val duration: SnackbarDuration
     ) : MainWindowEffect()
 
-    // TODO: OpenFileChooser
+    object OpenFileSelectionDialog : MainWindowEffect()
+
+    object OpenDirectorySelectionDialog : MainWindowEffect()
 }
