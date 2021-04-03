@@ -20,20 +20,21 @@ data class MainWindowState(
 
     companion object {
 
-        @JvmField
-        val INITIAL = MainWindowState(
-            isThemeDark = false,
-            sourceFilesSelectionTextFieldState = TextFieldState.DEFAULT,
-            destinationDirectorySelectionTextFieldState = TextFieldState.DEFAULT,
-            extensionReceiverTextFieldState = TextFieldState.DEFAULT,
-            isAllInOneCheckboxChecked = false,
-            imageVectors = listOf(Icons.Outlined.Face),
-            errorMessages = emptyList(),
-            areErrorMessagesShown = false,
-            currentPreviewIndex = 0,
-            isPreviousPreviewButtonEnabled = false,
-            isNextPreviewButtonEnabled = false
-        )
+        @JvmStatic
+        fun initial(isThemeDark: Boolean) =
+            MainWindowState(
+                isThemeDark = isThemeDark,
+                sourceFilesSelectionTextFieldState = TextFieldState.DEFAULT,
+                destinationDirectorySelectionTextFieldState = TextFieldState.DEFAULT,
+                extensionReceiverTextFieldState = TextFieldState.DEFAULT,
+                isAllInOneCheckboxChecked = false,
+                imageVectors = listOf(Icons.Outlined.Face),
+                errorMessages = emptyList(),
+                areErrorMessagesShown = false,
+                currentPreviewIndex = 0,
+                isPreviousPreviewButtonEnabled = false,
+                isNextPreviewButtonEnabled = false
+            )
     }
 }
 

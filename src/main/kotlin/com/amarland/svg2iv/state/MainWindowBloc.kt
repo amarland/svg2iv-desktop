@@ -8,8 +8,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -20,7 +20,8 @@ class MainWindowBloc {
     private val _effects = Channel<MainWindowEffect>(Channel.UNLIMITED)
     val effects = _effects.consumeAsFlow()
 
-    private val _state = MutableStateFlow(MainWindowState.INITIAL)
+    private val _state =
+        MutableStateFlow(MainWindowState.initial(isThemeDark = isDarkModeEnabled))
     val state = _state.asStateFlow()
 
     private val eventSink: SendChannel<MainWindowEvent>
@@ -53,10 +54,11 @@ class MainWindowBloc {
 
             is MainWindowEvent.SourceFilesParsed -> {
                 if (event.errorMessages.isNotEmpty()) {
+                    val message =
+                        "Error(s) occurred while trying to display a preview of the source(s)"
                     MainWindowEffect.ShowSnackbar(
                         id = SNACKBAR_ID_PREVIEW_ERRORS,
-                        message = "Error(s) occurred while trying to display a preview" +
-                                " of the source(s)",
+                        message,
                         actionLabel = "View errors",
                         duration = SnackbarDuration.Indefinite
                     )
@@ -71,7 +73,9 @@ class MainWindowBloc {
         currentState: MainWindowState
     ) = when (event) {
         MainWindowEvent.ToggleThemeButtonClicked ->
-            currentState.copy(isThemeDark = !currentState.isThemeDark)
+            currentState.copy(isThemeDark = !currentState.isThemeDark).also { newState ->
+                isDarkModeEnabled = newState.isThemeDark
+            }
 
         is MainWindowEvent.SourceFilesSelected -> {
             val files = event.files
