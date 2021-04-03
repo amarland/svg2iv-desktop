@@ -140,6 +140,7 @@ fun getCodeBlockForPath(path: VectorPath): CodeBlock =
         addMemberCall("path", *path.propertiesAsOrderedNameValuePairs(
             targetCallable = ImageVector.Builder::path
         ) { propertyName -> propertyName != "pathData" && !propertyName.startsWith("trimPath") })
+        // TODO above: support `trimPath*` properties with call to `addPath` instead of DSL `path`
         add(" {")
         addLineSeparator()
         indentFourSpaces()
@@ -398,6 +399,8 @@ private fun <T> Collection<KProperty1<T, *>>.firstWithName(name: String) =
 private val KNOWN_PARAMETERS_WITH_DEFAULT_VALUES =
     hashMapOf(
         "name" to DefaultGroupName,
+        "tintColor" to Color.Unspecified,
+        "tintBlendMode" to BlendMode.SrcIn,
         "rotate" to DefaultRotation,
         "pivotX" to DefaultPivotX,
         "pivotY" to DefaultPivotY,

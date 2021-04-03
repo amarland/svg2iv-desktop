@@ -1,13 +1,7 @@
 package com.amarland.svg2iv.outerworld
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.util.RingBuffer
@@ -109,7 +103,18 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
                     defaultWidth = imageVector.viewportWidth.dp,
                     defaultHeight = imageVector.viewportHeight.dp,
                     viewportWidth = imageVector.width,
-                    viewportHeight = imageVector.height
+                    viewportHeight = imageVector.height,
+                    tintColor = Color(imageVector.tintColor).takeUnless { it == Color.Transparent }
+                        ?: Color.Unspecified,
+                    tintBlendMode = when (imageVector.tintBlendMode) {
+                        _pb.BlendMode.SRC_OVER -> BlendMode.SrcOver
+                        _pb.BlendMode.SRC_IN -> BlendMode.SrcIn
+                        _pb.BlendMode.SRC_ATOP -> BlendMode.SrcAtop
+                        _pb.BlendMode.MODULATE -> BlendMode.Modulate
+                        _pb.BlendMode.SCREEN -> BlendMode.Screen
+                        _pb.BlendMode.PLUS -> BlendMode.Plus
+                        else -> BlendMode.SrcIn
+                    }
                 )
                     .addNodes(imageVector.nodesList)
                     .build()
@@ -178,7 +183,10 @@ private fun ImageVector.Builder.addPath(path: _pb.VectorPath): ImageVector.Build
             _pb.VectorPath.StrokeJoin.JOIN_ROUND -> StrokeJoin.Round
             else -> DefaultStrokeLineJoin
         },
-        strokeLineMiter = path.strokeLineMiter
+        strokeLineMiter = path.strokeLineMiter,
+        trimPathStart = path.trimPathStart,
+        trimPathEnd = path.trimPathEnd,
+        trimPathOffset = path.trimPathOffset
     )
     return this
 }

@@ -102,7 +102,8 @@ class ImageVectorPoetryTest {
                     strokeLineCap = StrokeCap.Round,
                     strokeLineJoin = StrokeJoin.Miter,
                     strokeLineMiter = 3F,
-                    pathFillType = PathFillType.NonZero
+                    pathFillType = PathFillType.NonZero/*,
+                    trimPathStart = 0.15F*/
                 )
             ).toString()
 
@@ -200,13 +201,16 @@ class ImageVectorPoetryTest {
             name: String = DefaultPathName,
             pathFillType: PathFillType = DefaultFillType,
             fill: Brush? = null,
-            fillAlpha: Float = 1.0f,
+            fillAlpha: Float = 1.0F,
             stroke: Brush? = null,
-            strokeAlpha: Float = 1.0f,
+            strokeAlpha: Float = 1.0F,
             strokeLineWidth: Float = DefaultStrokeLineWidth,
             strokeLineCap: StrokeCap = DefaultStrokeLineCap,
             strokeLineJoin: StrokeJoin = DefaultStrokeLineJoin,
-            strokeLineMiter: Float = DefaultStrokeLineMiter
+            strokeLineMiter: Float = DefaultStrokeLineMiter,
+            trimPathStart: Float = DefaultTrimPathStart,
+            trimPathEnd: Float = DefaultTrimPathEnd,
+            trimPathOffset: Float = DefaultTrimPathOffset,
         ) = VectorPath::class.primaryConstructor!!.let { constructor ->
             constructor.callBy(
                 mapOf(
@@ -220,7 +224,10 @@ class ImageVectorPoetryTest {
                     constructor.findParameterByName("strokeLineWidth")!! to strokeLineWidth,
                     constructor.findParameterByName("strokeLineCap")!! to strokeLineCap,
                     constructor.findParameterByName("strokeLineJoin")!! to strokeLineJoin,
-                    constructor.findParameterByName("strokeLineMiter")!! to strokeLineMiter
+                    constructor.findParameterByName("strokeLineMiter")!! to strokeLineMiter,
+                    constructor.findParameterByName("trimPathStart")!! to trimPathStart,
+                    constructor.findParameterByName("trimPathEnd")!! to trimPathEnd,
+                    constructor.findParameterByName("trimPathOffset")!! to trimPathOffset
                 )
             )
         }
