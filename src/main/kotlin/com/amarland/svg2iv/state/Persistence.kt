@@ -5,8 +5,10 @@ import java.io.IOException
 import java.util.Properties
 import kotlin.reflect.KProperty
 
+private const val KEY_IS_DARK_MODE_ENABLED = "isDarkModeEnabled"
+
 var isDarkModeEnabled by PropertiesDelegate(
-    "isDarkModeEnabled",
+    KEY_IS_DARK_MODE_ENABLED,
     fromString = java.lang.Boolean::parseBoolean,
     defaultValue = false
 )
@@ -21,11 +23,15 @@ private class PropertiesDelegate<T>(
         properties.getProperty(key)?.let(fromString) ?: defaultValue
 
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-        File(FILE_NAME).outputStream().use { outputStream ->
-            with(properties) {
-                setProperty(key, value.toString())
-                store(outputStream, null)
+        try {
+            File(FILE_NAME).outputStream().use { outputStream ->
+                with(properties) {
+                    setProperty(key, value.toString())
+                    store(outputStream, null)
+                }
             }
+        } catch (e: IOException) {
+            // well...
         }
     }
 
@@ -36,16 +42,20 @@ private class PropertiesDelegate<T>(
         @JvmStatic
         private val properties by lazy(LazyThreadSafetyMode.NONE) {
             Properties().apply {
-                File(FILE_NAME).takeIf { file ->
-                    @Suppress("UnnecessaryVariable")
-                    val doesFileExist =
-                        try {
-                            !file.createNewFile()
-                        } catch (e: IOException) {
-                            false
-                        }
-                    return@takeIf doesFileExist
-                }?.inputStream()?.use(::load)
+                try {
+                    File(FILE_NAME).takeIf { file ->
+                        @Suppress("UnnecessaryVariable")
+                        val doesFileExist =
+                            try {
+                                !file.createNewFile()
+                            } catch (e: IOException) {
+                                false
+                            }
+                        return@takeIf doesFileExist
+                    }?.inputStream()?.use(::load)
+                } catch (e: IOException) {
+                    // well...
+                }
             }
         }
     }

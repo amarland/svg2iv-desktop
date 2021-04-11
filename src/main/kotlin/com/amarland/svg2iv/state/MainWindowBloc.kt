@@ -1,6 +1,9 @@
 package com.amarland.svg2iv.state
 
 import androidx.compose.material.SnackbarDuration
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeysSet
+import androidx.compose.ui.input.key.plus
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.ui.CustomIcons
 import kotlinx.coroutines.MainScope
@@ -47,10 +50,14 @@ class MainWindowBloc {
     ): MainWindowEffect? =
         when (event) {
             MainWindowEvent.SelectSourceFilesButtonClicked ->
-                MainWindowEffect.OpenFileSelectionDialog
+                MainWindowEffect.OpenFileSelectionDialog.takeIf {
+                    currentState.areFileSystemEntitySelectionButtonsEnabled
+                }
 
             MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
-                MainWindowEffect.OpenDirectorySelectionDialog
+                MainWindowEffect.OpenDirectorySelectionDialog.takeIf {
+                    currentState.areFileSystemEntitySelectionButtonsEnabled
+                }
 
             is MainWindowEvent.SourceFilesParsed -> {
                 if (event.errorMessages.isNotEmpty()) {
@@ -58,12 +65,20 @@ class MainWindowBloc {
                         "Error(s) occurred while trying to display a preview of the source(s)"
                     MainWindowEffect.ShowSnackbar(
                         id = SNACKBAR_ID_PREVIEW_ERRORS,
-                        message,
+                        message = message,
                         actionLabel = "View errors",
                         duration = SnackbarDuration.Indefinite
                     )
                 } else null
             }
+
+            is MainWindowEvent.ShortcutActivated ->
+                when (event.shortcut) {
+                    SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES ->
+                        MainWindowEffect.OpenFileSelectionDialog
+
+                    else -> null
+                }
 
             else -> null
         }
@@ -71,44 +86,53 @@ class MainWindowBloc {
     private fun mapEventToState(
         event: MainWindowEvent,
         currentState: MainWindowState
-    ) = when (event) {
+    ): MainWindowState = when (event) {
         MainWindowEvent.ToggleThemeButtonClicked ->
             currentState.copy(isThemeDark = !currentState.isThemeDark).also { newState ->
                 isDarkModeEnabled = newState.isThemeDark
             }
 
-        is MainWindowEvent.SourceFilesSelected -> {
-            val files = event.files
+        MainWindowEvent.SelectSourceFilesButtonClicked,
+        MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
+            currentState.copy(areFileSystemEntitySelectionButtonsEnabled = false)
+
+        is MainWindowEvent.SourceFilesSelectionDialogClosed -> {
+            val paths = event.paths
             currentState.copy(
                 sourceFilesSelectionTextFieldState = TextFieldState(
-                    value = files.singleOrNull()?.path ?: files.joinToString { it.name },
-                    isError = files.any { !it.exists() }
-                )
-            ).also { parseSourceFiles(files) }
+                    value = paths.singleOrNull() ?: paths.joinToString(),
+                    isError = paths.any { path -> !File(path).exists() }
+                ),
+                areFileSystemEntitySelectionButtonsEnabled = true
+            ).also { parseSourceFiles(paths) }
         }
 
         is MainWindowEvent.SourceFilesParsed -> {
+            val (imageVectors, errorMessages) = event
             currentState.copy(
                 sourceFilesSelectionTextFieldState = currentState.sourceFilesSelectionTextFieldState
-                    .copy(isError = event.errorMessages.isNotEmpty()),
+                    .copy(isError = errorMessages.isNotEmpty()),
                 extensionReceiverTextFieldState = currentState.extensionReceiverTextFieldState
-                    .copy(placeholder = event.imageVectors.firstOrNull()?.name),
-                imageVectors = event.imageVectors.map { it ?: CustomIcons.ErrorCircle }
+                    .copy(placeholder = imageVectors.firstOrNull()?.name),
+                imageVectors = imageVectors.map { it ?: CustomIcons.ErrorCircle }
                     .takeUnless { it.isEmpty() } ?: currentState.imageVectors,
-                errorMessages = event.errorMessages,
+                errorMessages = errorMessages,
                 currentPreviewIndex = 0,
                 isPreviousPreviewButtonEnabled = false,
-                isNextPreviewButtonEnabled = event.imageVectors.size > 1
+                isNextPreviewButtonEnabled = imageVectors.size > 1
             )
         }
 
-        is MainWindowEvent.DestinationDirectorySelected ->
+        is MainWindowEvent.DestinationDirectorySelectionDialogClosed -> {
+            val path = event.path
             currentState.copy(
                 destinationDirectorySelectionTextFieldState = TextFieldState(
-                    value = event.directory.path.orEmpty(),
-                    isError = !event.directory.exists()
-                )
+                    value = path.orEmpty(),
+                    isError = path != null && !File(path).exists()
+                ),
+                areFileSystemEntitySelectionButtonsEnabled = true
             )
+        }
 
         is MainWindowEvent.AllInOneCheckboxClicked ->
             currentState.copy(
@@ -133,26 +157,43 @@ class MainWindowBloc {
             )
         }
 
-        is MainWindowEvent.SnackbarActionButtonClicked ->
-            when (event.snackbarId) {
+        is MainWindowEvent.SnackbarActionButtonClicked -> {
+            when (val snackbarId = event.snackbarId) {
                 SNACKBAR_ID_PREVIEW_ERRORS ->
                     currentState.copy(areErrorMessagesShown = true)
 
-                else -> throw IllegalArgumentException(
-                    "Unrecognized snackbar ID: ${event.snackbarId}"
-                )
+                else -> throw IllegalArgumentException("Unrecognized snackbar ID: $snackbarId")
             }
+        }
 
-        MainWindowEvent.ErrorMessagesDialogDismissed ->
+        MainWindowEvent.ErrorMessagesDialogCloseButtonClicked ->
             currentState.copy(areErrorMessagesShown = false)
+
+        is MainWindowEvent.ShortcutActivated ->
+            when (event.shortcut) {
+                SHORTCUT_CLOSE_DIALOG -> {
+                    if (currentState.areErrorMessagesShown)
+                        mapEventToState(
+                            MainWindowEvent.ErrorMessagesDialogCloseButtonClicked,
+                            currentState
+                        )
+                    else currentState
+                }
+                SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES ->
+                    mapEventToState(MainWindowEvent.SelectSourceFilesButtonClicked, currentState)
+
+                else -> currentState
+            }
 
         else -> currentState
     }
 
-    private fun parseSourceFiles(files: Collection<File>) {
+    private fun parseSourceFiles(paths: Collection<String>) {
+        if (paths.isEmpty()) return
+
         coroutineScope.launch {
             try {
-                callCliTool(files).also { (imageVectors, errorMessages) ->
+                callCliTool(paths).also { (imageVectors, errorMessages) ->
                     addEvent(MainWindowEvent.SourceFilesParsed(imageVectors, errorMessages))
                 }
             } catch (e: Exception) {
@@ -166,7 +207,16 @@ class MainWindowBloc {
         }
     }
 
-    private companion object {
+    companion object {
+
+        private val SHORTCUT_CLOSE_DIALOG = KeysSet(Key.Escape)
+        private val SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES = Key.AltLeft + Key.S
+
+        @JvmField
+        val SHORTCUTS = setOf(
+            SHORTCUT_CLOSE_DIALOG,
+            SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES
+        )
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00
     }

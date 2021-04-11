@@ -154,7 +154,7 @@ class CliToolCommunicationTest {
 
         val (actualImageVectors, actualErrorMessages) = runBlocking {
             callCliTool(
-                sourceFiles = listOf(mock()),
+                sourceFilePaths = listOf("/path/to/source/file"),
                 extensionReceiver = null,
                 startProcess = { _, _, address, port ->
                     mock<Process> {

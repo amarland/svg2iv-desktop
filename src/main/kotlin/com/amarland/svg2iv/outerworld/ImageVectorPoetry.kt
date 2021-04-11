@@ -137,24 +137,41 @@ fun getCodeBlockForGroup(group: VectorGroup): CodeBlock =
 
 fun getCodeBlockForPath(path: VectorPath): CodeBlock =
     with(CodeBlock.builder()) {
-        addMemberCall("path", *path.propertiesAsOrderedNameValuePairs(
-            targetCallable = ImageVector.Builder::path
-        ) { propertyName -> propertyName != "pathData" && !propertyName.startsWith("trimPath") })
-        // TODO above: support `trimPath*` properties with call to `addPath` instead of DSL `path`
-        add(" {")
-        addLineSeparator()
-        indentFourSpaces()
-        for (node in path.pathData) {
-            val targetFunction = getDslExtensionFunctionForPathNode(node)
-            val block = getSingleLineCodeBlockForMember(
-                targetFunction.name,
-                *node.propertiesAsOrderedNameValuePairs(targetCallable = targetFunction).values()
+        val isPathTrimmed = path.trimPathStart != DefaultTrimPathStart ||
+                path.trimPathEnd != DefaultTrimPathEnd ||
+                path.trimPathOffset != DefaultTrimPathOffset
+        if (isPathTrimmed) {
+            addMemberCall(
+                "addPath",
+                "pathData" to path.pathData,
+                *path.propertiesAsOrderedNameValuePairs(
+                    targetCallable = ImageVector.Builder::addPath
+                ) { propertyName -> propertyName != "pathData" }
             )
-            add(block)
+        } else {
+            addMemberCall(
+                "path",
+                *path.propertiesAsOrderedNameValuePairs(
+                    targetCallable = ImageVector.Builder::path
+                ) { propertyName ->
+                    propertyName != "pathData" && !propertyName.startsWith("trimPath")
+                }
+            )
+            add(" {")
             addLineSeparator()
+            indentFourSpaces()
+            for (node in path.pathData) {
+                val targetFunction = getDslExtensionFunctionForPathNode(node)
+                val block = getSingleLineCodeBlockForMember(
+                    targetFunction.name,
+                    *node.propertiesAsOrderedNameValuePairs(targetFunction).values()
+                )
+                add(block)
+                addLineSeparator()
+            }
+            unindentFourSpaces()
+            add("}")
         }
-        unindentFourSpaces()
-        add("}")
         build()
     }
 
@@ -172,14 +189,18 @@ private fun CodeBlock.Builder.addMemberCall(
 
 private fun getSingleLineCodeBlockForMember(
     memberName: String,
-    vararg arguments: Any?
+    vararg arguments: Any?,
+    isMemberAnObjectDeclaration: Boolean = false
 ): CodeBlock {
     val block = getBuilderStyleCodeBlockForMember(
         memberName,
         *arguments.map { null to it }.toTypedArray(),
         wrapLines = false
     )
-    return if (arguments.isEmpty()) block.toBuilder().add("()").build() else block
+    if (arguments.isEmpty() && !isMemberAnObjectDeclaration) {
+        return block.toBuilder().add("()").build()
+    }
+    return block
 }
 
 /*
@@ -267,9 +288,14 @@ private fun getCodeBlockForArgument(argName: String?, argValue: Any?): CodeBlock
 
         is PathNode -> {
             val clazz = argValue::class
+            val isNodeACloseNode = argValue is PathNode.Close
+            val arguments =
+                if (isNodeACloseNode) emptyArray<Any>()
+                else argValue.propertiesAsOrderedNameValuePairs(clazz.primaryConstructor!!).values()
             getSingleLineCodeBlockForMember(
                 "PathNode.${clazz.simpleName!!}",
-                *argValue.propertiesAsOrderedNameValuePairs(clazz.primaryConstructor!!).values()
+                *arguments,
+                isMemberAnObjectDeclaration = isNodeACloseNode
             )
         }
 

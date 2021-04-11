@@ -1,7 +1,7 @@
 package com.amarland.svg2iv.state
 
 import androidx.compose.ui.graphics.vector.ImageVector
-import java.io.File
+import androidx.compose.ui.input.key.KeysSet
 
 sealed class MainWindowEvent {
 
@@ -9,16 +9,16 @@ sealed class MainWindowEvent {
 
     object SelectSourceFilesButtonClicked : MainWindowEvent()
 
-    class SourceFilesSelected(val files: Collection<File>) : MainWindowEvent()
+    data class SourceFilesSelectionDialogClosed(val paths: Collection<String>) : MainWindowEvent()
 
-    class SourceFilesParsed(
+    data class SourceFilesParsed(
         val imageVectors: List<ImageVector?>,
         val errorMessages: List<String>
     ) : MainWindowEvent()
 
     object SelectDestinationDirectoryButtonClicked : MainWindowEvent()
 
-    class DestinationDirectorySelected(val directory: File) : MainWindowEvent()
+    data class DestinationDirectorySelectionDialogClosed(val path: String?) : MainWindowEvent()
 
     object AllInOneCheckboxClicked : MainWindowEvent()
 
@@ -28,7 +28,9 @@ sealed class MainWindowEvent {
 
     object ConvertButtonClicked : MainWindowEvent()
 
-    class SnackbarActionButtonClicked(val snackbarId: Int) : MainWindowEvent()
+    data class SnackbarActionButtonClicked(val snackbarId: Int) : MainWindowEvent()
 
-    object ErrorMessagesDialogDismissed : MainWindowEvent()
+    object ErrorMessagesDialogCloseButtonClicked : MainWindowEvent()
+
+    data class ShortcutActivated(val shortcut: KeysSet) : MainWindowEvent()
 }

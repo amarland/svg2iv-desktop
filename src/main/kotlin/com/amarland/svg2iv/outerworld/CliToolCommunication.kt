@@ -22,23 +22,23 @@ import com.amarland.svg2iv.outerworld.ProtobufImageVector as _pb
     SecurityException::class
 )
 suspend fun callCliTool(
-    sourceFiles: Collection<File>,
+    sourceFilePaths: Collection<String>,
     startProcess: (
-        sourceFiles: Collection<File>,
+        sourceFilePaths: Collection<String>,
         extensionReceiver: String?,
         serverSocketAddress: InetAddress,
         serverSocketPort: Int,
     ) -> Process = ::startCliToolProcess,
     extensionReceiver: String? = null
 ): Pair<List<ImageVector?>, List<String>> {
-    require(sourceFiles.isNotEmpty())
+    require(sourceFilePaths.isNotEmpty())
 
     return withContext(Dispatchers.IO) {
         val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress()).apply {
             soTimeout = 3000
         }
         val process = startProcess(
-            sourceFiles,
+            sourceFilePaths,
             extensionReceiver,
             serverSocket.inetAddress,
             serverSocket.localPort
@@ -76,7 +76,7 @@ suspend fun callCliTool(
     SecurityException::class
 )
 private fun startCliToolProcess(
-    sourceFiles: Collection<File>,
+    sourceFilePaths: Collection<String>,
     extensionReceiver: String?,
     serverSocketAddress: InetAddress,
     serverSocketPort: Int,
@@ -89,9 +89,14 @@ private fun startCliToolProcess(
     val command = executablePath +
             (if (extensionReceiver.isNullOrEmpty()) "" else " -r $extensionReceiver") +
             " -s ${serverSocketAddress.hostAddress}:$serverSocketPort" +
-            " " + sourceFiles.joinToString(" ") { it.absolutePath }
+            " " + sourceFilePaths.joinToString(" ")
     return Runtime.getRuntime().exec(arrayOf(shellInvocation, commandOption, command))
 }
+
+private fun Reader.readLines(to: MutableList<String>): List<String> =
+    to.apply { forEachLine { add(it) } }
+
+// region ImageVectors from Protobuf
 
 private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
     return nullableImageVectorsList.map { nullableImageVector ->
@@ -100,12 +105,12 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
                 val imageVector = nullableImageVector.value
                 ImageVector.Builder(
                     name = imageVector.name.takeIf { it.isNotEmpty() } ?: DefaultGroupName,
-                    defaultWidth = imageVector.viewportWidth.dp,
-                    defaultHeight = imageVector.viewportHeight.dp,
-                    viewportWidth = imageVector.width,
-                    viewportHeight = imageVector.height,
-                    tintColor = Color(imageVector.tintColor).takeUnless { it == Color.Transparent }
-                        ?: Color.Unspecified,
+                    defaultWidth = imageVector.width.dp,
+                    defaultHeight = imageVector.height.dp,
+                    viewportWidth = imageVector.viewportWidth,
+                    viewportHeight = imageVector.viewportHeight,
+                    tintColor = Color(imageVector.tintColor)
+                        .takeUnless { it == Color.Transparent } ?: Color.Unspecified,
                     tintBlendMode = when (imageVector.tintBlendMode) {
                         _pb.BlendMode.SRC_OVER -> BlendMode.SrcOver
                         _pb.BlendMode.SRC_IN -> BlendMode.SrcIn
@@ -123,9 +128,6 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
         }
     }
 }
-
-private fun Reader.readLines(to: MutableList<String>): List<String> =
-    to.apply { forEachLine { add(it) } }
 
 private fun ImageVector.Builder.addNodes(nodes: Iterable<_pb.VectorNode>): ImageVector.Builder {
     for (node in nodes) {
@@ -302,3 +304,5 @@ private fun mapBrush(brush: _pb.Brush): Brush? {
         }
     }
 }
+
+// endregion ImageVectors from Protobuf

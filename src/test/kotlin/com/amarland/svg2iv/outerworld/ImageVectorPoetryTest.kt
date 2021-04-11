@@ -26,7 +26,7 @@ class ImageVectorPoetryTest {
         fun `without attributes`() {
             val expected =
                 """path {
-                  |$PATH_DATA_AS_STRING
+                  |$PATH_DATA_AS_DSL_STRING
                   |}""".trimMargin()
 
             val actual = getCodeBlockForPath(
@@ -42,7 +42,7 @@ class ImageVectorPoetryTest {
                 """path(
                   |    fill = SolidColor(Color(0x11223344))
                   |) {
-                  |$PATH_DATA_AS_STRING
+                  |$PATH_DATA_AS_DSL_STRING
                   |}""".trimMargin()
 
             val actual = getCodeBlockForPath(
@@ -55,7 +55,8 @@ class ImageVectorPoetryTest {
         @Test
         fun `with all attributes set (with default values) and gradients`() {
             val expected =
-                """path(
+                """addPath(
+                  |    pathData = ${pathDataAsNonDslString(indentationLevel = 1)},
                   |    name = "TestVector",
                   |    fill = Brush.linearGradient(
                   |        colors = listOf(
@@ -76,9 +77,8 @@ class ImageVectorPoetryTest {
                   |    strokeLineWidth = 2F,
                   |    strokeLineCap = StrokeCap.Round,
                   |    strokeLineMiter = 3F,
-                  |) {
-                  |$PATH_DATA_AS_STRING
-                  |}""".trimMargin()
+                  |    trimPathStart = 0.15F,
+                  |)""".trimMargin()
 
             val actual = getCodeBlockForPath(
                 buildVectorPath(
@@ -102,8 +102,8 @@ class ImageVectorPoetryTest {
                     strokeLineCap = StrokeCap.Round,
                     strokeLineJoin = StrokeJoin.Miter,
                     strokeLineMiter = 3F,
-                    pathFillType = PathFillType.NonZero/*,
-                    trimPathStart = 0.15F*/
+                    pathFillType = PathFillType.NonZero,
+                    trimPathStart = 0.15F
                 )
             ).toString()
 
@@ -185,7 +185,7 @@ class ImageVectorPoetryTest {
             PathNode.Close
         )
 
-        private val PATH_DATA_AS_STRING = """
+        private val PATH_DATA_AS_DSL_STRING = """
             |    moveTo(9.72F, 10.93F)
             |    verticalLineTo(2.59F)
             |    arcTo(1.65F, 1.65F, 0F, false, false, 8F, 1F)
@@ -196,6 +196,24 @@ class ImageVectorPoetryTest {
             |    arcToRelative(2.44F, 2.44F, 0F, false, false, 2.55F, -2.35F)
             |    arcTo(2.34F, 2.34F, 0F, false, false, 9.72F, 10.93F)
             |    close()""".trimMargin()
+
+        private fun pathDataAsNonDslString(indentationLevel: Int) = """
+            |listOf(
+            |    PathNode.MoveTo(9.72F, 10.93F),
+            |    PathNode.VerticalTo(2.59F),
+            |    PathNode.ArcTo(1.65F, 1.65F, 0F, false, false, 8F, 1F),
+            |    PathNode.ArcTo(1.65F, 1.65F, 0F, false, false, 6.28F, 2.59F),
+            |    PathNode.VerticalTo(11F),
+            |    PathNode.RelativeArcTo(2.11F, 2.11F, 0F, false, false, -0.83F, 1.65F),
+            |    PathNode.ArcTo(2.48F, 2.48F, 0F, false, false, 8F, 15F),
+            |    PathNode.RelativeArcTo(2.44F, 2.44F, 0F, false, false, 2.55F, -2.35F),
+            |    PathNode.ArcTo(2.34F, 2.34F, 0F, false, false, 9.72F, 10.93F),
+            |    PathNode.Close,
+            |)""".trimMargin()
+            .replace(
+                System.lineSeparator(),
+                System.lineSeparator() + " ".repeat(indentationLevel * 4)
+            )
 
         private fun buildVectorPath(
             name: String = DefaultPathName,

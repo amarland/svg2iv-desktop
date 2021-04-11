@@ -1,13 +1,15 @@
 package com.amarland.svg2iv.outerworld
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.util.Base64
 import javax.swing.JFileChooser
 
-suspend fun openFileSelectionDialog(parent: Frame): List<File> {
+suspend fun openFileSelectionDialog(parent: Frame): List<String> {
     when {
         IS_OS_WINDOWS ->
             readPowerShellScriptOutputLines(
@@ -22,7 +24,7 @@ suspend fun openFileSelectionDialog(parent: Frame): List<File> {
                 }
                 """.trimIndent()
             )?.let { lines ->
-                return if (lines.isEmpty()) emptyList() else lines.map { path -> File(path) }
+                return lines.takeIf { it.isNotEmpty() } ?: emptyList()
             }
 
         IS_OS_MACOS ->
@@ -39,7 +41,7 @@ suspend fun openFileSelectionDialog(parent: Frame): List<File> {
                         path.split(File.pathSeparatorChar)
                             .drop(1) // "alias Macintosh HD"
                             .joinToString(File.separator)
-                    }?.map(::File)
+                    }
 
                 if (files != null) return files
             }
@@ -54,7 +56,6 @@ suspend fun openFileSelectionDialog(parent: Frame): List<File> {
                 val files = lines.singleOrNull()
                     ?.split(":")
                     ?.takeUnless { it.isEmpty() }
-                    ?.map(::File)
 
                 if (files != null) return files
             }
@@ -64,10 +65,10 @@ suspend fun openFileSelectionDialog(parent: Frame): List<File> {
         setFilenameFilter { _, name -> name.endsWith(".svg") || name.endsWith(".xml") }
         isMultipleMode = true
         isVisible = true
-    }.files.toList()
+    }.files.map { file -> file.absolutePath }
 }
 
-suspend fun openDirectorySelectionDialog(parent: Frame): File? {
+suspend fun openDirectorySelectionDialog(parent: Frame): String? {
     when {
         IS_OS_WINDOWS ->
             readPowerShellScriptOutputLines(
@@ -81,7 +82,7 @@ suspend fun openDirectorySelectionDialog(parent: Frame): File? {
                 if (lines.isEmpty()) return null
 
                 val path = lines.singleOrNull()?.takeUnless { path -> path.isEmpty() }
-                if (path != null) return File(path)
+                if (path != null) return path
             }
 
         IS_OS_MACOS ->
@@ -95,7 +96,7 @@ suspend fun openDirectorySelectionDialog(parent: Frame): File? {
                         ?.joinToString(File.separator)
                         ?.takeUnless { path -> path.isEmpty() }
 
-                    if (path != null) return File(path)
+                    if (path != null) return path
                 }
 
         else ->
@@ -104,34 +105,37 @@ suspend fun openDirectorySelectionDialog(parent: Frame): File? {
                     if (lines.isEmpty()) return null
 
                     val path = lines.singleOrNull()?.takeUnless { it.isEmpty() }
-                    if (path != null) return File(path)
+                    if (path != null) return path
                 }
     }
 
     return JFileChooser().apply {
         fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
         showDialog(parent, "Select")
-    }.selectedFile
+    }.selectedFile.absolutePath
 }
 
-private suspend fun readPowerShellScriptOutputLines(script: String): List<String>? {
-    val encodedScript = Base64.getEncoder()
-        .encode(script.toByteArray(Charsets.UTF_16LE /* System.Text.Encoding.Unicode */))
-        .decodeToString()
-    return Runtime.getRuntime()
-        .exec("powershell -ExecutionPolicy unrestricted -EncodedCommand $encodedScript")
-        .readOutputLines()
-}
+private suspend fun readPowerShellScriptOutputLines(script: String): List<String>? =
+    withContext(Dispatchers.IO) {
+        val encodedScript = Base64.getEncoder()
+            .encode(script.toByteArray(Charsets.UTF_16LE /* System.Text.Encoding.Unicode */))
+            .decodeToString()
+        return@withContext Runtime.getRuntime()
+            .exec("powershell -ExecutionPolicy unrestricted -EncodedCommand $encodedScript")
+            .readOutputLines()
+    }
 
-private suspend fun readShellCommandOutputLines(command: String) =
-    Runtime.getRuntime().exec(arrayOf("sh", "-c", command)).readOutputLines()
+private suspend fun readShellCommandOutputLines(command: String): List<String>? =
+    withContext(Dispatchers.IO) {
+        Runtime.getRuntime().exec(arrayOf("sh", "-c", command)).readOutputLines()
+    }
 
 /* file selected                      -> non-empty list
  * file not selected but dialog shown -> empty list
  * dialog not shown                   -> null
  */
 private suspend fun Process.readOutputLines(): List<String>? =
-    takeIf { onExit().await().exitValue() == 0 }
+    takeIf { onExit().await().errorStream.use { stream -> stream.read() } == -1 }
         ?.inputStream
         ?.bufferedReader()
         ?.readLines()

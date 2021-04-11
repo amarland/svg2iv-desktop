@@ -1,9 +1,11 @@
 package com.amarland.svg2iv
 
+import androidx.compose.desktop.LocalAppWindow
 import androidx.compose.desktop.Window
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.ui.unit.IntSize
 import com.amarland.svg2iv.state.MainWindowBloc
+import com.amarland.svg2iv.state.MainWindowEvent
 import com.amarland.svg2iv.ui.MainWindowContent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -14,5 +16,17 @@ fun main() = Window(
     size = IntSize(800, 350),
     resizable = false
 ) {
-    MainWindowContent(MainWindowBloc())
+    val bloc = MainWindowBloc()
+
+    MainWindowContent(bloc).also {
+        with(LocalAppWindow.current.keyboard) {
+            for (shortcut in MainWindowBloc.SHORTCUTS) {
+                setShortcut(shortcut) {
+                    bloc.addEvent(
+                        MainWindowEvent.ShortcutActivated(shortcut)
+                    )
+                }
+            }
+        }
+    }
 }
