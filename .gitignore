@@ -1,16 +1,12 @@
 *.iml
 .gradle
-/local.properties
+local.properties
 /.idea/caches
 /.idea/gradle.xml
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
 .DS_Store
 /build
-/captures
-.externalNativeBuild
 svg2iv.exe
 svg2iv.properties
