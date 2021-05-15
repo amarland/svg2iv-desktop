@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -21,7 +22,7 @@ class MainWindowBloc {
     private val coroutineScope = MainScope()
 
     private val _effects = Channel<MainWindowEffect>(Channel.UNLIMITED)
-    val effects = _effects.consumeAsFlow()
+    val effects = _effects.receiveAsFlow()
 
     private val _state =
         MutableStateFlow(MainWindowState.initial(isThemeDark = isDarkModeEnabled))

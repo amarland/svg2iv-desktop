@@ -12,11 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,7 +27,9 @@ import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
@@ -51,181 +49,187 @@ private val WORK_SANS: FontFamily =
 @ExperimentalMaterialApi
 @Suppress("FunctionName")
 fun MainWindowContent(bloc: MainWindowBloc) {
+    val coroutineScope = rememberCoroutineScope()
     val state = bloc.state.collectAsState().value
 
-    MaterialTheme(
-        colors = if (state.isThemeDark) {
-            darkColors(primary = ANDROID_GREEN, secondary = ANDROID_BLUE)
-        } else {
-            lightColors(primary = ANDROID_BLUE, secondary = ANDROID_GREEN)
-        },
-        typography = Typography(defaultFontFamily = WORK_SANS)
-    ) {
-        Box {
-            Column {
-                TopAppBar(
-                    title = { Text("SVG to ImageVector conversion tool") },
-                    actions = {
-                        IconButton(
-                            onClick = { bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked) }
-                        ) { Icon(imageVector = CustomIcons.ToggleTheme, contentDescription = null) }
-                        IconButton(
-                            onClick = { /* TODO */ }
-                        ) { Icon(imageVector = Icons.Outlined.Info, contentDescription = null) }
-                    }
-                )
+    CircularReveal(targetState = state.isThemeDark) { isThemeDark ->
+        MaterialTheme(
+            colors = if (isThemeDark) {
+                darkColors(primary = ANDROID_GREEN, secondary = ANDROID_BLUE)
+            } else {
+                lightColors(primary = ANDROID_BLUE, secondary = ANDROID_GREEN)
+            },
+            typography = Typography(defaultFontFamily = WORK_SANS)
+        ) {
+            Box {
+                Column {
+                    TopAppBar(
+                        title = { Text("SVG to ImageVector conversion tool") },
+                        actions = {
+                            IconButton(
+                                onClick = { bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked) }
+                            ) { Icon(imageVector = CustomIcons.ToggleTheme, contentDescription = null) }
+                            IconButton(
+                                onClick = { /* TODO */ }
+                            ) { Icon(imageVector = Icons.Outlined.Info, contentDescription = null) }
+                        }
+                    )
 
-                Row(modifier = Modifier.background(color = MaterialTheme.colors.background)) {
-                    val scaffoldState = rememberScaffoldState()
+                    Row(modifier = Modifier.background(color = MaterialTheme.colors.background)) {
+                        val scaffoldState = rememberScaffoldState()
 
-                    CompositionLocalProvider(LocalBloc provides bloc) {
-                        // not an absolute necessity, but makes handling Snackbars easier,
-                        // and allows "customization" of their width without visual "glitches",
-                        // although it might just be me who couldn't figure out how to achieve this
-                        Scaffold(
-                            modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
-                            scaffoldState = scaffoldState
-                        ) {
-                            val window = LocalAppWindow.current.window
-                            LaunchedEffect(bloc) {
-                                bloc.effects.collect { effect ->
-                                    launchEffect(effect, bloc, window, scaffoldState)
+                        CompositionLocalProvider(LocalBloc provides bloc) {
+                            // not an absolute necessity, but makes handling Snackbars easier,
+                            // and allows "customization" of their width without visual "glitches",
+                            // although it might just be me who couldn't figure out how to achieve this
+                            Scaffold(
+                                modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
+                                scaffoldState = scaffoldState
+                            ) {
+                                val window = LocalAppWindow.current.window
+                                var job: Job? by remember { mutableStateOf(null) }
+                                DisposableEffect(scaffoldState) {
+                                    job = bloc.effects.onEach { effect ->
+                                        launchEffect(effect, bloc, window, scaffoldState)
+                                    }.launchIn(coroutineScope)
+
+                                    onDispose { job?.cancel() }
+                                }
+
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    val sourceFilesSelectionTextFieldState =
+                                        state.sourceFilesSelectionTextFieldState
+                                    val areButtonsEnabled =
+                                        state.areFileSystemEntitySelectionButtonsEnabled
+                                    FileSystemEntitySelectionField(
+                                        selectionMode = FileSystemEntitySelectionMode.SOURCE,
+                                        value = sourceFilesSelectionTextFieldState.value,
+                                        isError = sourceFilesSelectionTextFieldState.isError,
+                                        isButtonEnabled = areButtonsEnabled
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = state.isAllInOneCheckboxChecked,
+                                            onCheckedChange = {
+                                                bloc.addEvent(MainWindowEvent.AllInOneCheckboxClicked)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Generate all assets in a single file")
+                                    }
+
+                                    val destinationDirectorySelectionTextFieldState =
+                                        state.destinationDirectorySelectionTextFieldState
+                                    FileSystemEntitySelectionField(
+                                        selectionMode = FileSystemEntitySelectionMode.DESTINATION,
+                                        value = destinationDirectorySelectionTextFieldState.value,
+                                        isError = destinationDirectorySelectionTextFieldState.isError,
+                                        isButtonEnabled = areButtonsEnabled
+                                    )
+
+                                    OutlinedTextField(
+                                        value = state.extensionReceiverTextFieldState.value,
+                                        onValueChange = {},
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { Text("Extension receiver (optional)") },
+                                        singleLine = true,
+                                        placeholder = {
+                                            Text(state.extensionReceiverTextFieldState.value)
+                                        }
+                                    )
                                 }
                             }
 
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.Center
+                            Box(
+                                modifier = Modifier.fillMaxSize()
+                                    .padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                val sourceFilesSelectionTextFieldState =
-                                    state.sourceFilesSelectionTextFieldState
-                                val areButtonsEnabled =
-                                    state.areFileSystemEntitySelectionButtonsEnabled
-                                FileSystemEntitySelectionField(
-                                    selectionMode = FileSystemEntitySelectionMode.SOURCE,
-                                    value = sourceFilesSelectionTextFieldState.value,
-                                    isError = sourceFilesSelectionTextFieldState.isError,
-                                    isButtonEnabled = areButtonsEnabled
+                                val previewSizeFraction = 0.65F
+                                Checkerboard(Modifier.fillMaxSize(previewSizeFraction))
+                                Image(
+                                    imageVector = state.imageVectors[state.currentPreviewIndex],
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(previewSizeFraction)
                                 )
 
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = state.isAllInOneCheckboxChecked,
-                                        onCheckedChange = {
-                                            bloc.addEvent(MainWindowEvent.AllInOneCheckboxClicked)
-                                        }
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Generate all assets in a single file")
-                                }
-
-                                val destinationDirectorySelectionTextFieldState =
-                                    state.destinationDirectorySelectionTextFieldState
-                                FileSystemEntitySelectionField(
-                                    selectionMode = FileSystemEntitySelectionMode.DESTINATION,
-                                    value = destinationDirectorySelectionTextFieldState.value,
-                                    isError = destinationDirectorySelectionTextFieldState.isError,
-                                    isButtonEnabled = areButtonsEnabled
+                                PreviewSelectionButton(
+                                    icon = Icons.Outlined.KeyboardArrowLeft,
+                                    onClick = {
+                                        bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
+                                    },
+                                    modifier = Modifier.align(Alignment.CenterStart),
+                                    isEnabled = state.isPreviousPreviewButtonEnabled
                                 )
 
-                                OutlinedTextField(
-                                    value = state.extensionReceiverTextFieldState.value,
-                                    onValueChange = {},
-                                    modifier = Modifier.fillMaxWidth(),
-                                    label = { Text("Extension receiver (optional)") },
-                                    singleLine = true,
-                                    placeholder = {
-                                        Text(state.extensionReceiverTextFieldState.value)
+                                PreviewSelectionButton(
+                                    icon = Icons.Outlined.KeyboardArrowRight,
+                                    onClick = {
+                                        bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
+                                    },
+                                    modifier = Modifier.align(Alignment.CenterEnd),
+                                    isEnabled = state.isNextPreviewButtonEnabled
+                                )
+
+                                ExtendedFloatingActionButton(
+                                    text = {
+                                        Text(
+                                            "Convert",
+                                            style = MaterialTheme.typography
+                                                .button
+                                                .copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                    },
+                                    onClick = { bloc.addEvent(MainWindowEvent.ConvertButtonClicked) },
+                                    modifier = Modifier.align(Alignment.BottomEnd),
+                                    icon = {
+                                        Icon(
+                                            imageVector = CustomIcons.ConvertVector,
+                                            contentDescription = null
+                                        )
                                     }
                                 )
                             }
                         }
-
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                                .padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val previewSizeFraction = 0.65F
-                            Checkerboard(Modifier.fillMaxSize(previewSizeFraction))
-                            Image(
-                                imageVector = state.imageVectors[state.currentPreviewIndex],
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(previewSizeFraction)
-                            )
-
-                            PreviewSelectionButton(
-                                icon = Icons.Outlined.KeyboardArrowLeft,
-                                onClick = {
-                                    bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
-                                },
-                                modifier = Modifier.align(Alignment.CenterStart),
-                                isEnabled = state.isPreviousPreviewButtonEnabled
-                            )
-
-                            PreviewSelectionButton(
-                                icon = Icons.Outlined.KeyboardArrowRight,
-                                onClick = {
-                                    bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
-                                },
-                                modifier = Modifier.align(Alignment.CenterEnd),
-                                isEnabled = state.isNextPreviewButtonEnabled
-                            )
-
-                            ExtendedFloatingActionButton(
-                                text = {
-                                    Text(
-                                        "Convert",
-                                        style = MaterialTheme.typography
-                                            .button
-                                            .copy(fontWeight = FontWeight.SemiBold)
-                                    )
-                                },
-                                onClick = { bloc.addEvent(MainWindowEvent.ConvertButtonClicked) },
-                                modifier = Modifier.align(Alignment.BottomEnd),
-                                icon = {
-                                    Icon(
-                                        imageVector = CustomIcons.ConvertVector,
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                        }
                     }
                 }
-            }
 
-            if (state.areErrorMessagesShown) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                        .background(
-                            color = MaterialTheme.colors.onBackground
-                                .copy(alpha = ContentAlpha.disabled)
-                        )
-                )
+                if (state.areErrorMessagesShown) {
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(
+                                color = MaterialTheme.colors.onBackground
+                                    .copy(alpha = ContentAlpha.disabled)
+                            )
+                    )
 
-                Surface(
-                    modifier = Modifier.widthIn(max = 600.dp)
-                        .padding(16.dp)
-                        .align(alignment = Alignment.Center),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        LazyColumn {
-                            items(state.errorMessages) { line ->
-                                Text(line, fontFamily = JETBRAINS_MONO)
+                    Surface(
+                        modifier = Modifier.widthIn(max = 600.dp)
+                            .padding(16.dp)
+                            .align(alignment = Alignment.Center),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            LazyColumn {
+                                items(state.errorMessages) { line ->
+                                    Text(line, fontFamily = JETBRAINS_MONO)
+                                }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
-                            },
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
-                            Text("Close")
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = {
+                                    bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Close")
+                            }
                         }
                     }
                 }
