@@ -1,8 +1,23 @@
 package com.amarland.svg2iv.outerworld
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.vector.*
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.vector.DefaultFillType
+import androidx.compose.ui.graphics.vector.DefaultGroupName
+import androidx.compose.ui.graphics.vector.DefaultPathName
+import androidx.compose.ui.graphics.vector.DefaultStrokeLineCap
+import androidx.compose.ui.graphics.vector.DefaultStrokeLineJoin
+import androidx.compose.ui.graphics.vector.EmptyPath
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathNode
+import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.util.RingBuffer
 import kotlinx.coroutines.Dispatchers

@@ -4,8 +4,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextDecoration
 
-fun String.asMnemonic(charIndex: Int = 0) =
-    AnnotatedString(
+fun String.asMnemonic(charIndex: Int = 0): AnnotatedString {
+    require(charIndex <= lastIndex)
+    return AnnotatedString(
         this,
         spanStyles = listOf(
             AnnotatedString.Range(
@@ -15,3 +16,4 @@ fun String.asMnemonic(charIndex: Int = 0) =
             )
         )
     )
+}

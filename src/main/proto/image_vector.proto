@@ -25,7 +25,7 @@ message ImageVector {
   float viewport_height = 4;
   float width = 5;
   float height = 6;
-  uint32 tint_color = 7;
+  fixed32 tint_color = 7;
   BlendMode tint_blend_mode = 8;
 }
 
@@ -128,14 +128,14 @@ message PathNode {
 
 message Brush {
   oneof solid_color_or_gradient {
-    uint32 solid_color = 1;
+    fixed32 solid_color = 1;
     Gradient linear_gradient = 2;
     Gradient radial_gradient = 3;
   }
 }
 
 message Gradient {
-  repeated uint32 colors = 1;
+  repeated fixed32 colors = 1;
   repeated float stops = 2;
   float start_x = 3;
   float start_y = 4;

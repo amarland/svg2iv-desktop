@@ -20,6 +20,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.4.3")
     implementation("com.squareup:kotlinpoet:1.7.2")
+    implementation("com.facebook:ktfmt:0.24")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")

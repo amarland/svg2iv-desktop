@@ -24,9 +24,9 @@ import com.amarland.svg2iv.util.asMnemonic
 fun FileSystemEntitySelectionField(
     modifier: Modifier = Modifier,
     selectionMode: FileSystemEntitySelectionMode,
-    value: String,
-    isError: Boolean,
-    isButtonEnabled: Boolean
+    value: String = "",
+    isError: Boolean = false,
+    isButtonEnabled: Boolean = true
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.Bottom) {
         val label: AnnotatedString

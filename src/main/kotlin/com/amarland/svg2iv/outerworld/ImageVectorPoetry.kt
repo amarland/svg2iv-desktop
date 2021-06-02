@@ -4,6 +4,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Dp
+import com.facebook.ktfmt.GOOGLE_FORMAT
+import com.facebook.ktfmt.format
 import com.squareup.kotlinpoet.CodeBlock
 import java.io.File
 import java.io.IOException
@@ -52,7 +54,8 @@ fun writeImageVectorsToFile(
             append(getCodeBlockForImageVector(imageVector, extensionReceiver))
         }
     }.toString()
-    file.writeText(contents)
+
+    file.writeText(format(GOOGLE_FORMAT, contents))
 }
 
 fun getCodeBlockForImageVector(
@@ -86,7 +89,7 @@ fun getCodeBlockForImageVector(
             *imageVector.propertiesAsOrderedNameValuePairs(
                 targetCallable = ImageVector.Builder::class.primaryConstructor!!
             ) { propertyName ->
-                !propertyName.startsWith("default") && !propertyName.startsWith("viewport")
+                !propertyName.startsWith("default") && !propertyName.startsWith("viewport") && propertyName != "root"
             }
         )
         .addLineSeparator()

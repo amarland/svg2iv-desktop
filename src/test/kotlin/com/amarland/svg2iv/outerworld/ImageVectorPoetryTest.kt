@@ -10,9 +10,14 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.dp
-import org.junit.jupiter.api.Assertions
+import com.amarland.svg2iv.ui.CustomIcons
+import com.facebook.ktfmt.ParseError
+import com.facebook.ktfmt.format
+import com.google.googlejavaformat.java.FormatterException
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import kotlin.reflect.full.findParameterByName
 import kotlin.reflect.full.primaryConstructor
 
@@ -33,7 +38,7 @@ class ImageVectorPoetryTest {
                 buildVectorPath()
             ).toString()
 
-            Assertions.assertEquals(expected, actual)
+            assertEquals(expected, actual)
         }
 
         @Test
@@ -49,7 +54,7 @@ class ImageVectorPoetryTest {
                 buildVectorPath(fill = SolidColor(Color(0x11223344)))
             ).toString()
 
-            Assertions.assertEquals(expected, actual)
+            assertEquals(expected, actual)
         }
 
         @Test
@@ -107,12 +112,12 @@ class ImageVectorPoetryTest {
                 )
             ).toString()
 
-            Assertions.assertEquals(expected, actual)
+            assertEquals(expected, actual)
         }
     }
 
     @Nested
-    inner class `writeGroup() writes a DSL-compliant group declaration` {
+    inner class `getCodeBlockForGroup() generates a DSL-compliant group declaration` {
 
         @Test
         fun `with both set and unset attributes`() {
@@ -165,7 +170,28 @@ class ImageVectorPoetryTest {
                     }.build().root[0] as VectorGroup
             ).toString()
 
-            Assertions.assertEquals(expected, actual)
+            assertEquals(expected, actual)
+        }
+    }
+
+    @Nested
+    inner class `getCodeBlockForImageVector() generates code that can be formatted by ktfmt` {
+
+        @Test
+        fun format() {
+            val codeBlock = getCodeBlockForImageVector(
+                CustomIcons.ConvertVector,
+                extensionReceiver = "CustomIcons"
+            )
+
+            try {
+                format(codeBlock.toString())
+            } catch (e: Exception) {
+                when (e) {
+                    is FormatterException, is ParseError -> fail(e)
+                    else -> throw e
+                }
+            }
         }
     }
 
@@ -197,7 +223,7 @@ class ImageVectorPoetryTest {
             |    arcTo(2.34F, 2.34F, 0F, false, false, 9.72F, 10.93F)
             |    close()""".trimMargin()
 
-        private fun pathDataAsNonDslString(indentationLevel: Int) = """
+        private fun pathDataAsNonDslString(@Suppress("SameParameterValue") indentationLevel: Int) = """
             |listOf(
             |    PathNode.MoveTo(9.72F, 10.93F),
             |    PathNode.VerticalTo(2.59F),

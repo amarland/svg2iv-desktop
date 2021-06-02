@@ -12,6 +12,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+private const val SQUARE_SIZE_IN_DP = 8
+
 @Composable
 @Suppress("FunctionName")
 fun Checkerboard(
@@ -19,17 +21,16 @@ fun Checkerboard(
     squareColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.12F)
 ) {
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
-        val squareSizeInDp = 8
         val maxWidth = constraints.maxWidth
         val maxHeight = constraints.maxHeight
 
         Canvas(
             modifier = Modifier.size(
-                width = (maxWidth - maxWidth % squareSizeInDp).dp,
-                height = (maxHeight - maxHeight % squareSizeInDp).dp
+                width = (maxWidth - maxWidth % SQUARE_SIZE_IN_DP).dp,
+                height = (maxHeight - maxHeight % SQUARE_SIZE_IN_DP).dp
             )
         ) {
-            val squareSizeInPixels = squareSizeInDp.dp.toPx()
+            val squareSizeInPixels = SQUARE_SIZE_IN_DP.dp.toPx()
             var x = 0F
             var y = 0F
 
