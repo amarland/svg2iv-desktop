@@ -24,11 +24,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
-import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import java.awt.event.MouseEvent
 import kotlin.math.hypot
 
 // Based on this gist (adapted for desktop): https://gist.github.com/bmonjoie/8506040b2ea534eac931378348622725
@@ -80,16 +79,17 @@ fun <T> CircularReveal(
         modifier = modifier.pointerInput(Unit) {
             forEachGesture {
                 awaitPointerEventScope {
-                    offset = awaitFirstPressed().mouseEvent?.let { event ->
-                        Offset(event.x.toFloat(), event.y.toFloat())
+                    offset = awaitPointerEvent().mouseEvent
+                        ?.takeIf { it.button == MouseEvent.BUTTON1 }
+                        ?.let { event -> Offset(event.x.toFloat(), event.y.toFloat())
                     }
                 }
             }
         }
     ) {
-        items.forEach { (key, content) ->
+        for ((key, item) in items) {
             key(key) {
-                content()
+                item()
             }
         }
     }
@@ -102,16 +102,6 @@ private data class CircularRevealAnimationItem<T>(
 
 private fun Modifier.circularReveal(progress: Float, offset: Offset? = null) =
     then(clip(CircularRevealShape(progress, offset)))
-
-private suspend fun AwaitPointerEventScope.awaitFirstPressed(): PointerEvent {
-    var event: PointerEvent
-    do {
-        event = awaitPointerEvent()
-    } while (
-        !event.changes.all { it.pressed }
-    )
-    return event
-}
 
 private class CircularRevealShape(
     private val progress: Float,

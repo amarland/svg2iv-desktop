@@ -63,7 +63,7 @@ fun getCodeBlockForImageVector(
     extensionReceiver: String? = null
 ): CodeBlock {
     val extensionReceiverDeclaration = extensionReceiver?.plus(".") ?: ""
-    val backingPropertyName = "_${imageVector.name.decapitalize()}"
+    val backingPropertyName = "_${imageVector.name.replaceFirstChar { it.lowercaseChar() }}"
     val publicPropertyName = imageVector.name
 
     return CodeBlock.builder()

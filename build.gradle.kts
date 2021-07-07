@@ -3,24 +3,23 @@ import com.google.protobuf.gradle.protoc
 import org.jetbrains.compose.compose
 
 plugins {
-    kotlin("jvm") version "1.4.32"
-    id("org.jetbrains.compose") version "0.4.0-build180"
-    id("com.google.protobuf") version "0.8.15"
+    kotlin("jvm") version "1.5.10"
+    id("org.jetbrains.compose") version "0.4.0"
+    id("com.google.protobuf") version "0.8.16"
 }
 
 repositories {
-    jcenter()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     mavenCentral()
 }
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("com.google.protobuf:protobuf-java:3.15.6")
+    implementation("com.google.protobuf:protobuf-java:3.17.2")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.4.3")
-    implementation("com.squareup:kotlinpoet:1.7.2")
-    implementation("com.facebook:ktfmt:0.24")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")
+    implementation("com.squareup:kotlinpoet:1.8.0")
+    implementation("com.facebook:ktfmt:0.25")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")
@@ -30,9 +29,6 @@ sourceSets {
     main {
         java {
             srcDir("build/generated/source/proto/main/java")
-        }
-        resources {
-            srcDir("build/generated/third_party_licenses/resources")
         }
     }
 }
@@ -45,7 +41,7 @@ compose.desktop {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.15.6"
+        artifact = "com.google.protobuf:protoc:3.17.2"
     }
 }
 
