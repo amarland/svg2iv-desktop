@@ -1,6 +1,5 @@
 package com.amarland.svg2iv.ui
 
-import androidx.compose.desktop.ComposeWindow
 import androidx.compose.desktop.LocalAppWindow
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,7 +13,9 @@ import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +32,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
+@ExperimentalComposeUiApi
 val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
 }
@@ -44,9 +46,9 @@ private val JETBRAINS_MONO: FontFamily =
 private val WORK_SANS: FontFamily =
     FontFamily(Font(resource = "font/work_sans_variable.ttf"))
 
+@ExperimentalComposeUiApi
 @Composable
 @ExperimentalCoroutinesApi
-@ExperimentalMaterialApi
 @Suppress("FunctionName")
 fun MainWindowContent(bloc: MainWindowBloc) {
     val coroutineScope = rememberCoroutineScope()
@@ -86,6 +88,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                 modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
                                 scaffoldState = scaffoldState
                             ) {
+                                // TODO: use `State` for "effects"?
                                 val window = LocalAppWindow.current.window
                                 var job: Job? by remember { mutableStateOf(null) }
                                 DisposableEffect(scaffoldState) {
@@ -238,7 +241,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
     }
 }
 
-@ExperimentalMaterialApi
+@ExperimentalComposeUiApi
 private suspend fun launchEffect(
     effect: MainWindowEffect,
     bloc: MainWindowBloc,

@@ -1,9 +1,8 @@
 package com.amarland.svg2iv.state
 
 import androidx.compose.material.SnackbarDuration
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeysSet
-import androidx.compose.ui.input.key.plus
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.ui.CustomIcons
 import kotlinx.coroutines.MainScope
@@ -17,6 +16,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
+@ExperimentalComposeUiApi
 class MainWindowBloc {
 
     private val coroutineScope = MainScope()
@@ -73,9 +73,9 @@ class MainWindowBloc {
                 } else null
             }
 
-            is MainWindowEvent.ShortcutActivated ->
-                when (event.shortcut) {
-                    SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES ->
+            is MainWindowEvent.MnemonicPressed ->
+                when (event.key) {
+                    MNEMONIC_KEY_SELECT_SOURCE_FILES ->
                         MainWindowEffect.OpenFileSelectionDialog
 
                     else -> null
@@ -170,21 +170,21 @@ class MainWindowBloc {
         MainWindowEvent.ErrorMessagesDialogCloseButtonClicked ->
             currentState.copy(areErrorMessagesShown = false)
 
-        is MainWindowEvent.ShortcutActivated ->
-            when (event.shortcut) {
-                SHORTCUT_CLOSE_DIALOG -> {
-                    if (currentState.areErrorMessagesShown)
-                        mapEventToState(
-                            MainWindowEvent.ErrorMessagesDialogCloseButtonClicked,
-                            currentState
-                        )
-                    else currentState
-                }
-                SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES ->
+        is MainWindowEvent.MnemonicPressed ->
+            when (event.key) {
+                MNEMONIC_KEY_SELECT_SOURCE_FILES ->
                     mapEventToState(MainWindowEvent.SelectSourceFilesButtonClicked, currentState)
 
                 else -> currentState
             }
+
+        MainWindowEvent.EscapeKeyPressed ->
+            if (currentState.areErrorMessagesShown)
+                mapEventToState(
+                    MainWindowEvent.ErrorMessagesDialogCloseButtonClicked,
+                    currentState
+                )
+            else currentState
 
         else -> currentState
     }
@@ -210,13 +210,11 @@ class MainWindowBloc {
 
     companion object {
 
-        private val SHORTCUT_CLOSE_DIALOG = KeysSet(Key.Escape)
-        private val SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES = Key.AltLeft + Key.S
+        private val MNEMONIC_KEY_SELECT_SOURCE_FILES = Key.S
 
         @JvmField
-        val SHORTCUTS = setOf(
-            SHORTCUT_CLOSE_DIALOG,
-            SHORTCUT_MNEMONIC_SELECT_SOURCE_FILES
+        val MNEMONIC_KEYS = setOf(
+            MNEMONIC_KEY_SELECT_SOURCE_FILES
         )
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00

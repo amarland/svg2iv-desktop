@@ -1,6 +1,6 @@
 package com.amarland.svg2iv.outerworld
 
-private val OS_NAME = System.getProperty("os.name")?.toLowerCase() ?: ""
+private val OS_NAME = System.getProperty("os.name")?.lowercase() ?: ""
 
 @JvmField
 val IS_OS_WINDOWS = OS_NAME.startsWith("windows")

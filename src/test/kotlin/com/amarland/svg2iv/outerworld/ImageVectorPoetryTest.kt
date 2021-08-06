@@ -11,13 +11,11 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.ui.CustomIcons
-import com.facebook.ktfmt.ParseError
-import com.facebook.ktfmt.format
-import com.google.googlejavaformat.java.FormatterException
+import com.tschuchort.compiletesting.KotlinCompilation
+import com.tschuchort.compiletesting.SourceFile
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import kotlin.reflect.full.findParameterByName
 import kotlin.reflect.full.primaryConstructor
 
@@ -175,23 +173,26 @@ class ImageVectorPoetryTest {
     }
 
     @Nested
-    inner class `getCodeBlockForImageVector() generates code that can be formatted by ktfmt` {
+    inner class `getFileContents() generates code that can be compiled` {
 
         @Test
-        fun format() {
-            val codeBlock = getCodeBlockForImageVector(
-                CustomIcons.ConvertVector,
-                extensionReceiver = "CustomIcons"
+        fun assertGeneratedCodeCanBeCompiled() {
+            val generatedSourceFileContents =
+                getFileContents(
+                    packageName = "test",
+                    imageVectors = listOf(CustomIcons.ConvertVector),
+                )
+            val generatedSourceFile = SourceFile.kotlin(
+                name = "ConvertVector.kt",
+                contents = generatedSourceFileContents
             )
 
-            try {
-                format(codeBlock.toString())
-            } catch (e: Exception) {
-                when (e) {
-                    is FormatterException, is ParseError -> fail(e)
-                    else -> throw e
-                }
-            }
+            val compilationResult = KotlinCompilation().apply {
+                sources = listOf(generatedSourceFile)
+                inheritClassPath = true
+            }.compile()
+
+            assertEquals(KotlinCompilation.ExitCode.OK, compilationResult.exitCode)
         }
     }
 

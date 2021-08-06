@@ -3,12 +3,13 @@ import com.google.protobuf.gradle.protoc
 import org.jetbrains.compose.compose
 
 plugins {
-    kotlin("jvm") version "1.5.10"
-    id("org.jetbrains.compose") version "0.4.0"
+    kotlin("jvm") version "1.5.21"
+    id("org.jetbrains.compose") version "1.0.0-alpha1-rc1"
     id("com.google.protobuf") version "0.8.16"
 }
 
 repositories {
+    google()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     mavenCentral()
 }
@@ -19,10 +20,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")
     implementation("com.squareup:kotlinpoet:1.8.0")
-    implementation("com.facebook:ktfmt:0.25")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")
+    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.4.2")
 }
 
 sourceSets {

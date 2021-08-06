@@ -1,7 +1,7 @@
 package com.amarland.svg2iv.state
 
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.KeysSet
+import androidx.compose.ui.input.key.Key
 
 sealed class MainWindowEvent {
 
@@ -32,5 +32,7 @@ sealed class MainWindowEvent {
 
     object ErrorMessagesDialogCloseButtonClicked : MainWindowEvent()
 
-    data class ShortcutActivated(val shortcut: KeysSet) : MainWindowEvent()
+    data class MnemonicPressed(val key: Key) : MainWindowEvent()
+
+    object EscapeKeyPressed : MainWindowEvent()
 }

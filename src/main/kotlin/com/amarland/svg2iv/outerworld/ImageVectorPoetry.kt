@@ -4,8 +4,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Dp
-import com.facebook.ktfmt.GOOGLE_FORMAT
-import com.facebook.ktfmt.format
 import com.squareup.kotlinpoet.CodeBlock
 import java.io.File
 import java.io.IOException
@@ -44,18 +42,25 @@ fun writeImageVectorsToFile(
                 ?: absoluteFilePath.length
         absoluteFilePath.substring(startOfPackageName, endOfPackageName)
     }
-    val contents = with(StringBuilder()) {
-        appendLine("package $packageName")
-        appendLine()
-        appendLine("androidx.compose.ui.graphics.*")
-        appendLine("androidx.compose.ui.unit.dp")
-        appendLine()
-        for (imageVector in imageVectors) {
-            append(getCodeBlockForImageVector(imageVector, extensionReceiver))
-        }
-    }.toString()
 
-    file.writeText(format(GOOGLE_FORMAT, contents))
+    file.writeText(getFileContents(packageName, imageVectors, extensionReceiver))
+}
+
+fun getFileContents(
+    packageName: String,
+    imageVectors: Iterable<ImageVector>,
+    extensionReceiver: String? = null
+) = with(StringBuilder()) {
+    appendLine("package $packageName")
+    appendLine()
+    appendLine("import androidx.compose.ui.graphics.*")
+    appendLine("import androidx.compose.ui.graphics.vector.*")
+    appendLine("import androidx.compose.ui.unit.dp")
+    appendLine()
+    for (imageVector in imageVectors) {
+        append(getCodeBlockForImageVector(imageVector, extensionReceiver))
+    }
+    toString()
 }
 
 fun getCodeBlockForImageVector(
@@ -89,7 +94,7 @@ fun getCodeBlockForImageVector(
             *imageVector.propertiesAsOrderedNameValuePairs(
                 targetCallable = ImageVector.Builder::class.primaryConstructor!!
             ) { propertyName ->
-                !propertyName.startsWith("default") && !propertyName.startsWith("viewport") && propertyName != "root"
+                propertyName != "name" && propertyName != "root"
             }
         )
         .addLineSeparator()
@@ -101,7 +106,7 @@ fun getCodeBlockForImageVector(
         .add("}")
         .addLineSeparator()
         .unindentFourSpaces()
-        .add("return $backingPropertyName")
+        .add("return $backingPropertyName!!")
         .addLineSeparator()
         .unindentFourSpaces()
         .add("}")
@@ -266,14 +271,7 @@ private fun getCodeBlockForArgument(argName: String?, argValue: Any?): CodeBlock
     val block = when (argValue) {
         is CodeBlock -> argValue
 
-        is String -> CodeBlock.of(
-            "%S", argValue.takeUnless { it == DEFAULT_IMAGE_VECTOR_NAME } ?: DefaultGroupName
-        )
-        is Float -> CodeBlock.of(argValue.toLiteral())
-        is Int -> CodeBlock.of("0x${argValue.toString(16).toUpperCase()}") // color int
-        is Boolean -> CodeBlock.of(argValue.toString())
-
-        is Dp -> CodeBlock.of("$argValue.dp")
+        is Dp -> CodeBlock.of("$argValue")
         is Offset -> CodeBlock.of("Offset(${argValue.x.toLiteral()}, ${argValue.y.toLiteral()})")
 
         is Array<*> -> { // assume array means vararg
@@ -303,10 +301,7 @@ private fun getCodeBlockForArgument(argName: String?, argValue: Any?): CodeBlock
         }
 
         is Color -> getCodeBlockForColor(argValue)
-        is SolidColor -> getSingleLineCodeBlockForMember(
-            "SolidColor",
-            getCodeBlockForColor(argValue.value)
-        )
+        is SolidColor -> getSingleLineCodeBlockForMember("SolidColor", getCodeBlockForColor(argValue.value))
         is LinearGradient -> {
             @Suppress("USELESS_CAST")
             getCodeBlockForGradient(argValue as LinearGradient)
@@ -326,7 +321,18 @@ private fun getCodeBlockForArgument(argName: String?, argValue: Any?): CodeBlock
             } else null
         }
 
-        is Enum<*> -> CodeBlock.of("${argValue::class.simpleName}.$argValue")
+        is BlendMode, is PathFillType, is StrokeCap, is StrokeJoin, is TileMode ->
+            CodeBlock.of("${argValue::class.simpleName}.$argValue")
+
+        // "primitive" types are last so that they're evaluated after inline classes,
+        // whose "instances" seem to be interpreted as their underlying ("primitive") type
+        // in addition to their declared type (the inline class)
+        is String -> CodeBlock.of(
+            "%S", argValue.takeUnless { it == DEFAULT_IMAGE_VECTOR_NAME } ?: DefaultGroupName
+        )
+        is Float -> CodeBlock.of(argValue.toLiteral())
+        is UInt -> CodeBlock.of("0x${argValue.toString(16).uppercase()}") // color int
+        is Boolean -> CodeBlock.of(argValue.toString())
 
         else -> null
     } ?: throw NotImplementedError("Unexpected type: ${argValue::class.simpleName}")
@@ -341,7 +347,7 @@ private fun getCodeBlockForArgument(argName: String?, argValue: Any?): CodeBlock
 private fun Float.toLiteral() = (if (rem(1) == 0F) toInt().toString() else toString()) + "F"
 
 private fun getCodeBlockForColor(color: Color) =
-    getSingleLineCodeBlockForMember("Color", color.toArgb())
+    getSingleLineCodeBlockForMember("Color", color.toArgb().toUInt())
 
 private inline fun <reified T : ShaderBrush> getCodeBlockForGradient(gradient: T): CodeBlock {
     val properties = T::class.declaredMemberProperties
