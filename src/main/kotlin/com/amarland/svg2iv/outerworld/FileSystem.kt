@@ -6,7 +6,7 @@ import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
-import java.util.Base64
+import java.util.*
 import javax.swing.JFileChooser
 
 suspend fun openFileSelectionDialog(parent: Frame): List<String> {
@@ -135,7 +135,7 @@ private suspend fun readShellCommandOutputLines(command: String): List<String>? 
  * dialog not shown                   -> null
  */
 private suspend fun Process.readOutputLines(): List<String>? =
-    takeIf { onExit().await().errorStream.use { stream -> stream.read() } == -1 }
-        ?.inputStream
-        ?.bufferedReader()
+    onExit().await()
+        .takeIf { exitValue() == 0 }
+        ?.inputStream?.bufferedReader()
         ?.readLines()

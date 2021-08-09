@@ -73,13 +73,23 @@ class MainWindowBloc {
                 } else null
             }
 
-            is MainWindowEvent.MnemonicPressed ->
+            is MainWindowEvent.MnemonicPressed -> {
                 when (event.key) {
                     MNEMONIC_KEY_SELECT_SOURCE_FILES ->
-                        MainWindowEffect.OpenFileSelectionDialog
+                        mapEventToEffect(MainWindowEvent.SelectSourceFilesButtonClicked, currentState)
+
+                    MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY ->
+                        mapEventToEffect(MainWindowEvent.SelectDestinationDirectoryButtonClicked, currentState)
 
                     else -> null
                 }
+            }
+
+            MainWindowEvent.EscapeKeyPressed -> {
+                if (currentState.areErrorMessagesShown) {
+                    mapEventToEffect(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked, currentState)
+                } else null
+            }
 
             else -> null
         }
@@ -170,22 +180,6 @@ class MainWindowBloc {
         MainWindowEvent.ErrorMessagesDialogCloseButtonClicked ->
             currentState.copy(areErrorMessagesShown = false)
 
-        is MainWindowEvent.MnemonicPressed ->
-            when (event.key) {
-                MNEMONIC_KEY_SELECT_SOURCE_FILES ->
-                    mapEventToState(MainWindowEvent.SelectSourceFilesButtonClicked, currentState)
-
-                else -> currentState
-            }
-
-        MainWindowEvent.EscapeKeyPressed ->
-            if (currentState.areErrorMessagesShown)
-                mapEventToState(
-                    MainWindowEvent.ErrorMessagesDialogCloseButtonClicked,
-                    currentState
-                )
-            else currentState
-
         else -> currentState
     }
 
@@ -211,10 +205,12 @@ class MainWindowBloc {
     companion object {
 
         private val MNEMONIC_KEY_SELECT_SOURCE_FILES = Key.S
+        private val MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY = Key.D
 
         @JvmField
         val MNEMONIC_KEYS = setOf(
-            MNEMONIC_KEY_SELECT_SOURCE_FILES
+            MNEMONIC_KEY_SELECT_SOURCE_FILES,
+            MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY
         )
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00

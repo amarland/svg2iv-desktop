@@ -368,7 +368,7 @@ private inline fun <reified T : ShaderBrush> getCodeBlockForGradient(gradient: T
             } else colors
         ),
         *gradient.propertiesAsOrderedNameValuePairs { propertyName ->
-            propertyName != "colors" && propertyName != "stops"
+            propertyName != "colors" && propertyName != "stops" && propertyName != "intrinsicSize"
         }
     )
 }

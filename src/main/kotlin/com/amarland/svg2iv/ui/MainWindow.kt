@@ -1,6 +1,5 @@
 package com.amarland.svg2iv.ui
 
-import androidx.compose.desktop.LocalAppWindow
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -35,6 +34,11 @@ import kotlinx.coroutines.flow.onEach
 @ExperimentalComposeUiApi
 val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
+}
+
+// TODO: this is meant to be temporary (until dialogs are rewritten to use the new Window API)
+val LocalComposeWindow = compositionLocalOf<ComposeWindow> {
+    error("CompositionLocal LocalComposeWindow not provided!")
 }
 
 private val ANDROID_GREEN = Color(0xFF00DE7A)
@@ -89,7 +93,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                 scaffoldState = scaffoldState
                             ) {
                                 // TODO: use `State` for "effects"?
-                                val window = LocalAppWindow.current.window
+                                val window = LocalComposeWindow.current
                                 var job: Job? by remember { mutableStateOf(null) }
                                 DisposableEffect(scaffoldState) {
                                     job = bloc.effects.onEach { effect ->

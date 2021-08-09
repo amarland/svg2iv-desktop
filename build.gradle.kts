@@ -4,7 +4,7 @@ import org.jetbrains.compose.compose
 
 plugins {
     kotlin("jvm") version "1.5.21"
-    id("org.jetbrains.compose") version "1.0.0-alpha1-rc1"
+    id("org.jetbrains.compose") version "1.0.0-alpha2"
     id("com.google.protobuf") version "0.8.16"
 }
 

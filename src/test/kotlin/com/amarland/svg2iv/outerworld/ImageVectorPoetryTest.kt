@@ -31,6 +31,7 @@ class ImageVectorPoetryTest {
                 """path {
                   |$PATH_DATA_AS_DSL_STRING
                   |}""".trimMargin()
+                    .replace("\n", System.lineSeparator()) // avoid conflicts between EOL characters
 
             val actual = getCodeBlockForPath(
                 buildVectorPath()
@@ -47,6 +48,7 @@ class ImageVectorPoetryTest {
                   |) {
                   |$PATH_DATA_AS_DSL_STRING
                   |}""".trimMargin()
+                    .replace("\n", System.lineSeparator())
 
             val actual = getCodeBlockForPath(
                 buildVectorPath(fill = SolidColor(Color(0x11223344)))
@@ -82,6 +84,7 @@ class ImageVectorPoetryTest {
                   |    strokeLineMiter = 3F,
                   |    trimPathStart = 0.15F,
                   |)""".trimMargin()
+                    .replace("\n", System.lineSeparator())
 
             val actual = getCodeBlockForPath(
                 buildVectorPath(
@@ -141,6 +144,7 @@ class ImageVectorPoetryTest {
                   |        }
                   |    }
                   |}""".trimMargin()
+                    .replace("\n", System.lineSeparator())
 
             val actual = getCodeBlockForGroup(
                 ImageVector.Builder("irrelevant", 24.dp, 24.dp, 24F, 24F)
@@ -237,10 +241,7 @@ class ImageVectorPoetryTest {
             |    PathNode.ArcTo(2.34F, 2.34F, 0F, false, false, 9.72F, 10.93F),
             |    PathNode.Close,
             |)""".trimMargin()
-            .replace(
-                System.lineSeparator(),
-                System.lineSeparator() + " ".repeat(indentationLevel * 4)
-            )
+            .replace("\n", "\n" + " ".repeat(indentationLevel * 4))
 
         private fun buildVectorPath(
             name: String = DefaultPathName,

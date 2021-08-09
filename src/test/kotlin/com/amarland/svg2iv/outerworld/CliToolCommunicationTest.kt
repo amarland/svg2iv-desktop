@@ -37,6 +37,8 @@ class CliToolCommunicationTest {
                             .setName("test_vector")
                             .setViewportWidth(100F).setViewportHeight(50F)
                             .setWidth(100F).setHeight(50F)
+                            .setTintBlendMode(_pb.BlendMode.SRC_IN)
+                            .setTintColor(Color.Unspecified.toArgb())
                             .addNodes(
                                 _pb.VectorNode.newBuilder().setGroup(
                                     _pb.VectorGroup.newBuilder()
@@ -100,6 +102,7 @@ class CliToolCommunicationTest {
                                                         _pb.VectorPath.StrokeJoin.JOIN_MITER
                                                     )
                                                     .setStrokeLineMiter(0.6F)
+                                                    .setTrimPathEnd(1F) // default value for `ImageVector.trimPathEnd`
                                                     .setFillType(_pb.VectorPath.FillType.NON_ZERO)
                                             )
                                         )
@@ -107,6 +110,7 @@ class CliToolCommunicationTest {
                             )
                     )
             ).build()
+
         val errorMessages = listOf(
             "Error message #1",
             "Error message #2",
