@@ -1,6 +1,7 @@
 package com.amarland.svg2iv.outerworld
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
@@ -10,14 +11,15 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.dp
-import com.amarland.svg2iv.ui.CustomIcons
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findParameterByName
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.javaField
 
 @Suppress("ClassName")
 class ImageVectorPoetryTest {
@@ -58,11 +60,45 @@ class ImageVectorPoetryTest {
         }
 
         @Test
-        fun `with all attributes set (with default values) and gradients`() {
+        fun `with non-trimmed path, all attributes set (with default values) and gradients`() {
+            val expected =
+                """path(
+                  |    name = "NonTrimmedPath",
+                  |    fill = Brush.linearGradient(
+                  |        colors = listOf(
+                  |            Color(0x11223344),
+                  |            Color(0x55667788),
+                  |        ),
+                  |        start = Offset(1F, 2F),
+                  |        end = Offset(3F, 4F),
+                  |    ),
+                  |    fillAlpha = 0.5F,
+                  |    stroke = Brush.radialGradient(
+                  |        0.25F to Color(0x11223344),
+                  |        0.5F to Color(0x22556677),
+                  |        0.75F to Color(0x33889910),
+                  |        center = Offset(1F, 2F),
+                  |        radius = 3F,
+                  |    ),
+                  |    strokeLineWidth = 2F,
+                  |    strokeLineCap = StrokeCap.Round,
+                  |    strokeLineMiter = 3F,
+                  |) {
+                  |$PATH_DATA_AS_DSL_STRING
+                  |}""".trimMargin()
+                    .replace("\n", System.lineSeparator())
+
+            val actual = getCodeBlockForPath(generateVectorPath(trimPath = false)).toString()
+
+            assertEquals(expected, actual)
+        }
+
+        @Test
+        fun `with trimmed path, all attributes set (with default values) and gradients`() {
             val expected =
                 """addPath(
                   |    pathData = ${pathDataAsNonDslString(indentationLevel = 1)},
-                  |    name = "TestVector",
+                  |    name = "TrimmedPath",
                   |    fill = Brush.linearGradient(
                   |        colors = listOf(
                   |            Color(0x11223344),
@@ -86,32 +122,7 @@ class ImageVectorPoetryTest {
                   |)""".trimMargin()
                     .replace("\n", System.lineSeparator())
 
-            val actual = getCodeBlockForPath(
-                buildVectorPath(
-                    name = "TestVector",
-                    fill = Brush.linearGradient(
-                        listOf(Color(0x11223344), Color(0x55667788)),
-                        start = Offset(1F, 2F),
-                        end = Offset(3F, 4F)
-                    ),
-                    fillAlpha = 0.5F,
-                    stroke = Brush.radialGradient(
-                        0.25F to Color(0x11223344),
-                        0.5F to Color(0x22556677),
-                        0.75F to Color(0x33889910),
-                        center = Offset(1F, 2F),
-                        radius = 3F,
-                        tileMode = TileMode.Clamp,
-                    ),
-                    strokeAlpha = 1F,
-                    strokeLineWidth = 2F,
-                    strokeLineCap = StrokeCap.Round,
-                    strokeLineJoin = StrokeJoin.Miter,
-                    strokeLineMiter = 3F,
-                    pathFillType = PathFillType.NonZero,
-                    trimPathStart = 0.15F
-                )
-            ).toString()
+            val actual = getCodeBlockForPath(generateVectorPath(trimPath = true)).toString()
 
             assertEquals(expected, actual)
         }
@@ -181,10 +192,41 @@ class ImageVectorPoetryTest {
 
         @Test
         fun assertGeneratedCodeCanBeCompiled() {
+            val imageVector = ImageVector.Builder(
+                name = "TestVector",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24F,
+                viewportHeight = 24F,
+                tintColor = Color(0x11223344),
+                tintBlendMode = BlendMode.Modulate
+            ).build()
+                .apply {
+                    VectorGroup::class.declaredMemberProperties.first { it.name == "children" }
+                        .javaField!!
+                        .apply { isAccessible = true }
+                        .set(
+                            root,
+                            listOf(
+                                with(VectorGroup::class.primaryConstructor!!) {
+                                    callBy(
+                                        mapOf(
+                                            findParameterByName("name")!! to "TestGroup",
+                                            findParameterByName("rotation")!! to 90F,
+                                            findParameterByName("children")!! to
+                                                    listOf(generateVectorPath(trimPath = false))
+                                        )
+                                    )
+                                },
+                                generateVectorPath(trimPath = true)
+                            )
+                        )
+                }
+
             val generatedSourceFileContents =
                 getFileContents(
                     packageName = "test",
-                    imageVectors = listOf(CustomIcons.ConvertVector),
+                    imageVectors = listOf(imageVector),
                 )
             val generatedSourceFile = SourceFile.kotlin(
                 name = "ConvertVector.kt",
@@ -242,6 +284,32 @@ class ImageVectorPoetryTest {
             |    PathNode.Close,
             |)""".trimMargin()
             .replace("\n", "\n" + " ".repeat(indentationLevel * 4))
+
+        private fun generateVectorPath(trimPath: Boolean) =
+            buildVectorPath(
+                name = if (trimPath) "TrimmedPath" else "NonTrimmedPath",
+                fill = Brush.linearGradient(
+                    listOf(Color(0x11223344), Color(0x55667788)),
+                    start = Offset(1F, 2F),
+                    end = Offset(3F, 4F)
+                ),
+                fillAlpha = 0.5F,
+                stroke = Brush.radialGradient(
+                    0.25F to Color(0x11223344),
+                    0.5F to Color(0x22556677),
+                    0.75F to Color(0x33889910),
+                    center = Offset(1F, 2F),
+                    radius = 3F,
+                    tileMode = TileMode.Clamp,
+                ),
+                strokeAlpha = 1F,
+                strokeLineWidth = 2F,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Miter,
+                strokeLineMiter = 3F,
+                pathFillType = PathFillType.NonZero,
+                trimPathStart = if (trimPath) 0.15F else DefaultTrimPathStart
+            )
 
         private fun buildVectorPath(
             name: String = DefaultPathName,
