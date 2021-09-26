@@ -104,7 +104,7 @@ private fun startCliToolProcess(
     val command = executablePath +
             (if (extensionReceiver.isNullOrEmpty()) "" else " -r $extensionReceiver") +
             " -s ${serverSocketAddress.hostAddress}:$serverSocketPort" +
-            " " + sourceFilePaths.joinToString(" ")
+            " \"" + sourceFilePaths.joinToString(" ") + '"'
     return Runtime.getRuntime().exec(arrayOf(shellInvocation, commandOption, command))
 }
 

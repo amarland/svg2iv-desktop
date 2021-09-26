@@ -53,6 +53,7 @@ fun getFileContents(
 ) = with(StringBuilder()) {
     appendLine("package $packageName")
     appendLine()
+    appendLine("import androidx.compose.ui.geometry.Offset")
     appendLine("import androidx.compose.ui.graphics.*")
     appendLine("import androidx.compose.ui.graphics.vector.*")
     appendLine("import androidx.compose.ui.unit.dp")
