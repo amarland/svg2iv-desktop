@@ -4,8 +4,8 @@ import org.jetbrains.compose.compose
 
 plugins {
     kotlin("jvm") version "1.5.21"
-    id("org.jetbrains.compose") version "1.0.0-alpha2"
-    id("com.google.protobuf") version "0.8.16"
+    id("org.jetbrains.compose") version "1.0.0-alpha3"
+    id("com.google.protobuf") version "0.8.17"
 }
 
 repositories {
@@ -16,14 +16,14 @@ repositories {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("com.google.protobuf:protobuf-java:3.17.2")
+    implementation("com.google.protobuf:protobuf-java:3.18.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")
-    implementation("com.squareup:kotlinpoet:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
+    implementation("com.squareup:kotlinpoet:1.9.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.4.2")
+    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.4.4")
 }
 
 sourceSets {
@@ -42,7 +42,7 @@ compose.desktop {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.17.2"
+        artifact = "com.google.protobuf:protoc:3.18.0"
     }
 }
 
