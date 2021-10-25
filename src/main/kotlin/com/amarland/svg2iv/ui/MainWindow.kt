@@ -51,9 +51,10 @@ private val WORK_SANS: FontFamily =
     FontFamily(Font(resource = "font/work_sans_variable.ttf"))
 
 @ExperimentalComposeUiApi
-@Composable
 @ExperimentalCoroutinesApi
+@ExperimentalMaterialApi
 @Suppress("FunctionName")
+@Composable
 fun MainWindowContent(bloc: MainWindowBloc) {
     val coroutineScope = rememberCoroutineScope()
     val state = bloc.state.collectAsState().value
@@ -121,12 +122,14 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = state.isAllInOneCheckboxChecked,
-                                            onCheckedChange = {
-                                                bloc.addEvent(MainWindowEvent.AllInOneCheckboxClicked)
-                                            }
-                                        )
+                                        CompositionLocalProvider(LocalMinimumTouchTargetEnforcement provides false) {
+                                            Checkbox(
+                                                checked = state.isAllInOneCheckboxChecked,
+                                                onCheckedChange = {
+                                                    bloc.addEvent(MainWindowEvent.AllInOneCheckboxClicked)
+                                                }
+                                            )
+                                        }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text("Generate all assets in a single file")
                                     }

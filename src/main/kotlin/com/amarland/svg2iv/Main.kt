@@ -1,5 +1,6 @@
 package com.amarland.svg2iv
 
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.Key
@@ -22,6 +23,7 @@ private val mainWindowBloc = MainWindowBloc()
 
 @ExperimentalComposeUiApi
 @ExperimentalCoroutinesApi
+@ExperimentalMaterialApi
 fun main() = singleWindowApplication(
     title = "svg2iv",
     resizable = false,
