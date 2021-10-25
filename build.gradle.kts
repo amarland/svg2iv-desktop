@@ -6,8 +6,8 @@ import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 val protobufVersion by extra("3.18.1")
 
 plugins {
-    kotlin("jvm") version "1.5.21"
-    id("org.jetbrains.compose") version "1.0.0-alpha3"
+    kotlin("jvm") version "1.5.31"
+    id("org.jetbrains.compose") version "1.0.0-beta1"
     id("com.google.protobuf") version "0.8.17"
     id("app.cash.licensee") version "1.2.0"
 }

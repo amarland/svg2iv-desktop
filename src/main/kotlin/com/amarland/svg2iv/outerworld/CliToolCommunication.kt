@@ -109,7 +109,7 @@ private fun startCliToolProcess(
 }
 
 private fun Reader.readLines(to: MutableList<String>): List<String> =
-    to.apply { forEachLine { add(it) } }
+    to.apply { forEachLine(this::add) }
 
 // region ImageVectors from Protobuf
 
