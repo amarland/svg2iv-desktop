@@ -3,11 +3,11 @@ import com.google.protobuf.gradle.protoc
 import org.jetbrains.compose.compose
 import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 
-val protobufVersion by extra("3.18.1")
+val protobufVersion by extra("3.19.1")
 
 plugins {
     kotlin("jvm") version "1.5.31"
-    id("org.jetbrains.compose") version "1.0.0-beta1"
+    id("org.jetbrains.compose") version "1.0.0-beta5"
     id("com.google.protobuf") version "0.8.17"
     id("app.cash.licensee") version "1.2.0"
 }
@@ -20,10 +20,10 @@ repositories {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("com.google.protobuf:protobuf-java:$protobufVersion")
+    implementation("com.google.protobuf:protobuf-kotlin:$protobufVersion")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${getKotlinPluginVersion()}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
-    implementation("com.squareup:kotlinpoet:1.10.1")
+    implementation("com.squareup:kotlinpoet:1.10.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")
