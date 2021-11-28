@@ -2,6 +2,7 @@ import com.google.protobuf.gradle.protobuf
 import com.google.protobuf.gradle.protoc
 import org.jetbrains.compose.compose
 import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val protobufVersion by extra("3.19.1")
 
@@ -12,10 +13,9 @@ plugins {
     id("app.cash.licensee") version "1.2.0"
 }
 
-repositories {
-    google()
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-    mavenCentral()
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 dependencies {
@@ -38,11 +38,7 @@ sourceSets {
     }
 }
 
-compose.desktop {
-    application {
-        mainClass = "MainKt"
-    }
-}
+compose.desktop.application.mainClass = "MainKt"
 
 protobuf {
     protoc {
@@ -52,9 +48,23 @@ protobuf {
 
 licensee {
     allow("Apache-2.0")
-    allow("MIT")
+    allow("BSD-3-Clause")
+    ignoreDependencies("org.jetbrains.compose.animation")
+    ignoreDependencies("org.jetbrains.compose.foundation")
+    ignoreDependencies("org.jetbrains.compose.material")
+    ignoreDependencies("org.jetbrains.compose.runtime")
+    ignoreDependencies("org.jetbrains.compose.ui")
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.withType<KotlinCompile>().all {
+    kotlinOptions {
+        languageVersion = "1.5"
+        apiVersion = "1.5"
+        jvmTarget = "${JavaVersion.VERSION_1_8}"
+        freeCompilerArgs = freeCompilerArgs + "-Xopt-in=kotlin.RequiresOptIn"
+    }
 }
