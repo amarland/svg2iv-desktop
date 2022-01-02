@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 @ExperimentalComposeUiApi
-val LocalBloc = compositionLocalOf<MainWindowBloc> {
+private val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
 }
 
@@ -74,8 +74,15 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         title = { Text("SVG to ImageVector conversion tool") },
                         actions = {
                             IconButton(
-                                onClick = { bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked) }
-                            ) { Icon(imageVector = CustomIcons.ToggleTheme, contentDescription = null) }
+                                onClick = {
+                                    bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = CustomIcons.ToggleTheme,
+                                    contentDescription = null
+                                )
+                            }
                             IconButton(
                                 onClick = { /* TODO */ }
                             ) { Icon(imageVector = Icons.Outlined.Info, contentDescription = null) }
@@ -113,6 +120,11 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                     val areButtonsEnabled =
                                         state.areFileSystemEntitySelectionButtonsEnabled
                                     FileSystemEntitySelectionField(
+                                        onButtonClicked = {
+                                            bloc.addEvent(
+                                                MainWindowEvent.SelectSourceFilesButtonClicked
+                                            )
+                                        },
                                         selectionMode = FileSystemEntitySelectionMode.SOURCE,
                                         value = sourceFilesSelectionTextFieldState.value,
                                         isError = sourceFilesSelectionTextFieldState.isError,
@@ -126,7 +138,9 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                             Checkbox(
                                                 checked = state.isAllInOneCheckboxChecked,
                                                 onCheckedChange = {
-                                                    bloc.addEvent(MainWindowEvent.AllInOneCheckboxClicked)
+                                                    bloc.addEvent(
+                                                        MainWindowEvent.AllInOneCheckboxClicked
+                                                    )
                                                 }
                                             )
                                         }
@@ -137,6 +151,11 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                     val destinationDirectorySelectionTextFieldState =
                                         state.destinationDirectorySelectionTextFieldState
                                     FileSystemEntitySelectionField(
+                                        onButtonClicked = {
+                                            bloc.addEvent(
+                                                MainWindowEvent.SelectDestinationDirectoryButtonClicked
+                                            )
+                                        },
                                         selectionMode = FileSystemEntitySelectionMode.DESTINATION,
                                         value = destinationDirectorySelectionTextFieldState.value,
                                         isError = destinationDirectorySelectionTextFieldState.isError,

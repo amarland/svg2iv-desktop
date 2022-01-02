@@ -64,7 +64,7 @@ tasks.withType<KotlinCompile>().all {
     kotlinOptions {
         languageVersion = "1.5"
         apiVersion = "1.5"
-        jvmTarget = "${JavaVersion.VERSION_1_8}"
+        jvmTarget = JavaVersion.VERSION_11.toString()
         freeCompilerArgs = freeCompilerArgs + "-Xopt-in=kotlin.RequiresOptIn"
     }
 }

@@ -17,13 +17,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
-import com.amarland.svg2iv.state.MainWindowEvent
 import com.amarland.svg2iv.util.asMnemonic
 
 @ExperimentalComposeUiApi
 @Composable
 @Suppress("FunctionName")
 fun FileSystemEntitySelectionField(
+    onButtonClicked: () -> Unit,
     modifier: Modifier = Modifier,
     selectionMode: FileSystemEntitySelectionMode,
     value: String = "",
@@ -55,19 +55,8 @@ fun FileSystemEntitySelectionField(
             isError = isError
         )
 
-        val bloc = LocalBloc.current
         OutlinedButton(
-            onClick = {
-                bloc.addEvent(
-                    when (selectionMode) {
-                        FileSystemEntitySelectionMode.SOURCE ->
-                            MainWindowEvent.SelectSourceFilesButtonClicked
-
-                        FileSystemEntitySelectionMode.DESTINATION ->
-                            MainWindowEvent.SelectDestinationDirectoryButtonClicked
-                    }
-                )
-            },
+            onButtonClicked,
             modifier = Modifier.height(56.dp).padding(start = 8.dp),
             enabled = isButtonEnabled
         ) {
