@@ -1,11 +1,14 @@
 package com.amarland.svg2iv.state
 
+import net.harawata.appdirs.AppDirsFactory
 import java.io.File
 import java.io.IOException
-import java.util.Properties
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.*
 import kotlin.reflect.KProperty
 
-private const val KEY_IS_DARK_MODE_ENABLED = "isDarkModeEnabled"
+private const val KEY_IS_DARK_MODE_ENABLED = "is_dark_mode_enabled"
 
 var isDarkModeEnabled by PropertiesDelegate(
     KEY_IS_DARK_MODE_ENABLED,
@@ -24,7 +27,7 @@ private class PropertiesDelegate<T>(
 
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
         try {
-            File(FILE_NAME).outputStream().use { outputStream ->
+            Files.newOutputStream(FILE_PATH).use { outputStream ->
                 with(properties) {
                     setProperty(key, value.toString())
                     store(outputStream, null)
@@ -37,22 +40,22 @@ private class PropertiesDelegate<T>(
 
     private companion object {
 
-        private const val FILE_NAME = "svg2iv.properties"
+        private val FILE_PATH = Path.of(
+            // aligned with Flutter implementation (`shared_preferences` package)
+            AppDirsFactory.getInstance().getUserDataDir(
+                "svg2iv-desktop", null, "com.amarland", true
+            ),
+            File.separator,
+            "svg2iv.properties"
+        )
 
         @JvmStatic
         private val properties by lazy(LazyThreadSafetyMode.NONE) {
             Properties().apply {
                 try {
-                    File(FILE_NAME).takeIf { file ->
-                        @Suppress("UnnecessaryVariable")
-                        val doesFileExist =
-                            try {
-                                !file.createNewFile()
-                            } catch (e: IOException) {
-                                false
-                            }
-                        return@takeIf doesFileExist
-                    }?.inputStream()?.use(::load)
+                    if (!Files.exists(FILE_PATH))
+                        Files.createFile(FILE_PATH)
+                    Files.newInputStream(FILE_PATH).use(::load)
                 } catch (e: IOException) {
                     // well...
                 }

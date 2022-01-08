@@ -24,6 +24,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:${getKotlinPluginVersion()}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
     implementation("com.squareup:kotlinpoet:1.10.2")
+    implementation("net.harawata:appdirs:1.2.1")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")
