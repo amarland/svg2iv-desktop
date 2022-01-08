@@ -76,10 +76,16 @@ class MainWindowBloc {
             is MainWindowEvent.MnemonicPressed -> {
                 when (event.key) {
                     MNEMONIC_KEY_SELECT_SOURCE_FILES ->
-                        mapEventToEffect(MainWindowEvent.SelectSourceFilesButtonClicked, currentState)
+                        mapEventToEffect(
+                            MainWindowEvent.SelectSourceFilesButtonClicked,
+                            currentState
+                        )
 
                     MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY ->
-                        mapEventToEffect(MainWindowEvent.SelectDestinationDirectoryButtonClicked, currentState)
+                        mapEventToEffect(
+                            MainWindowEvent.SelectDestinationDirectoryButtonClicked,
+                            currentState
+                        )
 
                     else -> null
                 }
@@ -87,7 +93,10 @@ class MainWindowBloc {
 
             MainWindowEvent.EscapeKeyPressed -> {
                 if (currentState.areErrorMessagesShown) {
-                    mapEventToEffect(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked, currentState)
+                    mapEventToEffect(
+                        MainWindowEvent.ErrorMessagesDialogCloseButtonClicked,
+                        currentState
+                    )
                 } else null
             }
 
@@ -183,7 +192,7 @@ class MainWindowBloc {
         else -> currentState
     }
 
-    private fun parseSourceFiles(paths: Collection<String>) {
+    private fun parseSourceFiles(paths: List<String>) {
         if (paths.isEmpty()) return
 
         coroutineScope.launch {

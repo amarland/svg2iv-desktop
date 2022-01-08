@@ -9,7 +9,7 @@ sealed class MainWindowEvent {
 
     object SelectSourceFilesButtonClicked : MainWindowEvent()
 
-    data class SourceFilesSelectionDialogClosed(val paths: Collection<String>) : MainWindowEvent()
+    data class SourceFilesSelectionDialogClosed(val paths: List<String>) : MainWindowEvent()
 
     data class SourceFilesParsed(
         val imageVectors: List<ImageVector?>,

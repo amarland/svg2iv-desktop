@@ -5,14 +5,13 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
-import java.io.File
 import java.util.*
 import javax.swing.JFileChooser
 
 suspend fun openFileSelectionDialog(parent: Frame): List<String> {
     when {
-        IS_OS_WINDOWS ->
-            readPowerShellScriptOutputLines(
+        IS_OS_WINDOWS -> {
+            val files = readPowerShellScriptOutputLines(
                 """
                 Add-Type -AssemblyName System.Windows.Forms
                 ${'$'}dialog = New-Object System.Windows.Forms.OpenFileDialog -Property @{
@@ -23,35 +22,37 @@ suspend fun openFileSelectionDialog(parent: Frame): List<String> {
                     Write-Output ${'$'}dialog.FileNames
                 }
                 """.trimIndent()
-            )?.let { lines ->
-                return lines.takeIf { it.isNotEmpty() } ?: emptyList()
-            }
+            )
+
+            if (files != null) return files
+        }
 
         IS_OS_MACOS ->
             readShellCommandOutputLines(
                 """osascript -e "choose file""" +
                         """ of type { "*.svg", "*.xml" } with multiple selections allowed""""
             )?.let { lines ->
-                if (lines.isEmpty()) return emptyList()
+                if (lines.isEmpty()) return lines
 
                 val files = lines.singleOrNull()
                     ?.split(", ")
-                    ?.takeUnless { path -> path.isEmpty() }
+                    ?.takeUnless { paths -> paths.isEmpty() }
                     ?.map { path ->
-                        path.split(File.pathSeparatorChar)
+                        path.split(':')
                             .drop(1) // "alias Macintosh HD"
-                            .joinToString(File.separator)
+                            .joinToString("\\")
                     }
 
                 if (files != null) return files
             }
 
         else ->
+            // TODO: check whether qarma is available first
             readShellCommandOutputLines(
-                """zenity --file-selection --file-filter="*.svg *.xml" --multiple --separator """ +
-                        File.pathSeparatorChar
+                "zenity --file-selection --file-filter=\"*.svg *.xml\"" +
+                        " --multiple --separator :"
             )?.let { lines ->
-                if (lines.isEmpty()) return emptyList()
+                if (lines.isEmpty()) return lines
 
                 val files = lines.singleOrNull()
                     ?.split(":")
@@ -93,7 +94,7 @@ suspend fun openDirectorySelectionDialog(parent: Frame): String? {
                     val path = lines.singleOrNull()
                         ?.split(":")
                         ?.drop(1) // "alias Macintosh HD"
-                        ?.joinToString(File.separator)
+                        ?.joinToString("\\")
                         ?.takeUnless { path -> path.isEmpty() }
 
                     if (path != null) return path
