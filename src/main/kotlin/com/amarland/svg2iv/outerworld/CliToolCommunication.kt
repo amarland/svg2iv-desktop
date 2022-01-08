@@ -37,9 +37,9 @@ import com.amarland.svg2iv.outerworld.ProtobufImageVector as _pb
     SecurityException::class
 )
 suspend fun callCliTool(
-    sourceFilePaths: Collection<String>,
+    sourceFilePaths: List<String>,
     startProcess: (
-        sourceFilePaths: Collection<String>,
+        sourceFilePaths: List<String>,
         extensionReceiver: String?,
         serverSocketAddress: InetAddress,
         serverSocketPort: Int,
@@ -91,7 +91,7 @@ suspend fun callCliTool(
     SecurityException::class
 )
 private fun startCliToolProcess(
-    sourceFilePaths: Collection<String>,
+    sourceFilePaths: List<String>,
     extensionReceiver: String?,
     serverSocketAddress: InetAddress,
     serverSocketPort: Int,

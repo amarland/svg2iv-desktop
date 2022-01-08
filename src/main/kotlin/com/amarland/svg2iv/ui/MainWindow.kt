@@ -95,7 +95,8 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         CompositionLocalProvider(LocalBloc provides bloc) {
                             // not an absolute necessity, but makes handling Snackbars easier,
                             // and allows "customization" of their width without visual "glitches",
-                            // although it might just be me who couldn't figure out how to achieve this
+                            // although it might just be me who couldn't figure out
+                            // how to achieve this
                             Scaffold(
                                 modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
                                 scaffoldState = scaffoldState
@@ -134,7 +135,9 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        CompositionLocalProvider(LocalMinimumTouchTargetEnforcement provides false) {
+                                        CompositionLocalProvider(
+                                            LocalMinimumTouchTargetEnforcement provides false
+                                        ) {
                                             Checkbox(
                                                 checked = state.isAllInOneCheckboxChecked,
                                                 onCheckedChange = {
@@ -153,12 +156,14 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                     FileSystemEntitySelectionField(
                                         onButtonClicked = {
                                             bloc.addEvent(
-                                                MainWindowEvent.SelectDestinationDirectoryButtonClicked
+                                                MainWindowEvent
+                                                    .SelectDestinationDirectoryButtonClicked
                                             )
                                         },
                                         selectionMode = FileSystemEntitySelectionMode.DESTINATION,
                                         value = destinationDirectorySelectionTextFieldState.value,
-                                        isError = destinationDirectorySelectionTextFieldState.isError,
+                                        isError =
+                                        destinationDirectorySelectionTextFieldState.isError,
                                         isButtonEnabled = areButtonsEnabled
                                     )
 
@@ -215,7 +220,9 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                                                 .copy(fontWeight = FontWeight.SemiBold)
                                         )
                                     },
-                                    onClick = { bloc.addEvent(MainWindowEvent.ConvertButtonClicked) },
+                                    onClick = {
+                                        bloc.addEvent(MainWindowEvent.ConvertButtonClicked)
+                                    },
                                     modifier = Modifier.align(Alignment.BottomEnd),
                                     icon = {
                                         Icon(
@@ -253,7 +260,9 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = {
-                                    bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
+                                    bloc.addEvent(
+                                        MainWindowEvent.ErrorMessagesDialogCloseButtonClicked
+                                    )
                                 },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
