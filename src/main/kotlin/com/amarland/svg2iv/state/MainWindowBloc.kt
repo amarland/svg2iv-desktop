@@ -73,33 +73,6 @@ class MainWindowBloc {
                 } else null
             }
 
-            is MainWindowEvent.MnemonicPressed -> {
-                when (event.key) {
-                    MNEMONIC_KEY_SELECT_SOURCE_FILES ->
-                        mapEventToEffect(
-                            MainWindowEvent.SelectSourceFilesButtonClicked,
-                            currentState
-                        )
-
-                    MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY ->
-                        mapEventToEffect(
-                            MainWindowEvent.SelectDestinationDirectoryButtonClicked,
-                            currentState
-                        )
-
-                    else -> null
-                }
-            }
-
-            MainWindowEvent.EscapeKeyPressed -> {
-                if (currentState.areErrorMessagesShown) {
-                    mapEventToEffect(
-                        MainWindowEvent.ErrorMessagesDialogCloseButtonClicked,
-                        currentState
-                    )
-                } else null
-            }
-
             else -> null
         }
 
@@ -213,13 +186,19 @@ class MainWindowBloc {
 
     companion object {
 
-        private val MNEMONIC_KEY_SELECT_SOURCE_FILES = Key.S
-        private val MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY = Key.D
-
         @JvmField
-        val MNEMONIC_KEYS = setOf(
-            MNEMONIC_KEY_SELECT_SOURCE_FILES,
-            MNEMONIC_KEY_SELECT_DESTINATION_DIRECTORY
+        val SHORTCUT_BINDINGS = mapOf(
+            setOf(Key.AltLeft, Key.S) to { bloc: MainWindowBloc ->
+                bloc.addEvent(MainWindowEvent.SelectSourceFilesButtonClicked)
+            },
+            setOf(Key.AltLeft, Key.D) to { bloc: MainWindowBloc ->
+                bloc.addEvent(MainWindowEvent.SelectDestinationDirectoryButtonClicked)
+            },
+            setOf(Key.Escape) to { bloc: MainWindowBloc ->
+                if (bloc.state.value.areErrorMessagesShown) {
+                    bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
+                }
+            }
         )
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00

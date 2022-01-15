@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.singleWindowApplication
 import com.amarland.svg2iv.state.MainWindowBloc
-import com.amarland.svg2iv.state.MainWindowEvent
 import com.amarland.svg2iv.ui.LocalComposeWindow
 import com.amarland.svg2iv.ui.MainWindowContent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,17 +37,15 @@ fun main() = singleWindowApplication(
 @ExperimentalComposeUiApi
 private fun onPreviewKeyEvent(event: KeyEvent): Boolean {
     if (event.type == KeyEventType.KeyDown) {
+        val shortcut = mutableSetOf(event.key)
         if (event.isAltPressed) {
-            MainWindowBloc.MNEMONIC_KEYS
-                .singleOrNull { it == event.key }
-                ?.let { key ->
-                    mainWindowBloc.addEvent(MainWindowEvent.MnemonicPressed(key))
-                    return true
-                }
-        } else if (event.key == Key.Escape) {
-            mainWindowBloc.addEvent(MainWindowEvent.EscapeKeyPressed)
-            return true
+            shortcut.add(Key.AltLeft)
         }
+        MainWindowBloc.SHORTCUT_BINDINGS[shortcut]
+            ?.let { action ->
+                action(mainWindowBloc)
+                return true
+            }
     }
     return false
 }
