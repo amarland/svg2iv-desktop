@@ -2,8 +2,10 @@ package com.amarland.svg2iv.state
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Face
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
 
+@Immutable
 data class MainWindowState(
     val isThemeDark: Boolean,
     val sourceFilesSelectionTextFieldState: TextFieldState,
@@ -11,10 +13,9 @@ data class MainWindowState(
     val areFileSystemEntitySelectionButtonsEnabled: Boolean,
     val extensionReceiverTextFieldState: TextFieldState,
     val isAllInOneCheckboxChecked: Boolean,
-    val imageVectors: List<ImageVector>,
+    val imageVector: ImageVector,
     val errorMessages: List<String>,
     val areErrorMessagesShown: Boolean,
-    val currentPreviewIndex: Int,
     val isPreviousPreviewButtonEnabled: Boolean,
     val isNextPreviewButtonEnabled: Boolean
 ) {
@@ -30,16 +31,16 @@ data class MainWindowState(
                 areFileSystemEntitySelectionButtonsEnabled = true,
                 extensionReceiverTextFieldState = TextFieldState.DEFAULT,
                 isAllInOneCheckboxChecked = false,
-                imageVectors = listOf(Icons.Outlined.Face),
+                imageVector = Icons.Outlined.Face,
                 errorMessages = emptyList(),
                 areErrorMessagesShown = false,
-                currentPreviewIndex = 0,
                 isPreviousPreviewButtonEnabled = false,
                 isNextPreviewButtonEnabled = false
             )
     }
 }
 
+@Immutable
 data class TextFieldState(
     val value: String,
     val isError: Boolean = false,

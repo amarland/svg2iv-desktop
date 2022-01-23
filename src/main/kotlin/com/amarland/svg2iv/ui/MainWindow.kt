@@ -204,10 +204,7 @@ private fun LeftPanel(state: MainWindowState) {
                 state.destinationDirectorySelectionTextFieldState
             FileSystemEntitySelectionField(
                 onButtonClicked = {
-                    bloc.addEvent(
-                        MainWindowEvent
-                            .SelectDestinationDirectoryButtonClicked
-                    )
+                    bloc.addEvent(MainWindowEvent.SelectDestinationDirectoryButtonClicked)
                 },
                 selectionMode = FileSystemEntitySelectionMode.DESTINATION,
                 value = destinationDirectorySelectionTextFieldState.value,
@@ -244,7 +241,7 @@ private fun RightPanel(state: MainWindowState) {
         val previewSizeFraction = 0.65F
         Checkerboard(Modifier.fillMaxSize(previewSizeFraction))
         Image(
-            imageVector = state.imageVectors[state.currentPreviewIndex],
+            imageVector = state.imageVector,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(previewSizeFraction)
         )

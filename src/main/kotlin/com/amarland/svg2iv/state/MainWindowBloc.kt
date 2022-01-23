@@ -2,6 +2,7 @@ package com.amarland.svg2iv.state
 
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.ui.CustomIcons
@@ -18,6 +19,9 @@ import java.io.File
 
 @ExperimentalComposeUiApi
 class MainWindowBloc {
+
+    private val imageVectors = mutableListOf<ImageVector>()
+    private var previewIndex = 0
 
     private val coroutineScope = MainScope()
 
@@ -101,16 +105,16 @@ class MainWindowBloc {
         }
 
         is MainWindowEvent.SourceFilesParsed -> {
-            val (imageVectors, errorMessages) = event
+            val imageVector =
+                if (imageVectors.isNotEmpty()) imageVectors[0]
+                else currentState.imageVector
             currentState.copy(
                 sourceFilesSelectionTextFieldState = currentState.sourceFilesSelectionTextFieldState
-                    .copy(isError = errorMessages.isNotEmpty()),
+                    .copy(isError = event.errorMessages.isNotEmpty()),
                 extensionReceiverTextFieldState = currentState.extensionReceiverTextFieldState
                     .copy(placeholder = imageVectors.firstOrNull()?.name),
-                imageVectors = imageVectors.map { it ?: CustomIcons.ErrorCircle }
-                    .takeUnless { it.isEmpty() } ?: currentState.imageVectors,
-                errorMessages = errorMessages,
-                currentPreviewIndex = 0,
+                imageVector = imageVector,
+                errorMessages = event.errorMessages,
                 isPreviousPreviewButtonEnabled = false,
                 isNextPreviewButtonEnabled = imageVectors.size > 1
             )
@@ -133,20 +137,18 @@ class MainWindowBloc {
             )
 
         MainWindowEvent.PreviousPreviewButtonClicked -> {
-            val previewIndex = currentState.currentPreviewIndex - 1
             currentState.copy(
-                currentPreviewIndex = previewIndex,
+                imageVector = imageVectors[--previewIndex],
                 isPreviousPreviewButtonEnabled = previewIndex > 0,
                 isNextPreviewButtonEnabled = true
             )
         }
 
         MainWindowEvent.NextPreviewButtonClicked -> {
-            val previewIndex = currentState.currentPreviewIndex + 1
             currentState.copy(
-                currentPreviewIndex = previewIndex,
+                imageVector = imageVectors[++previewIndex],
                 isPreviousPreviewButtonEnabled = true,
-                isNextPreviewButtonEnabled = previewIndex < currentState.imageVectors.lastIndex
+                isNextPreviewButtonEnabled = previewIndex < imageVectors.lastIndex
             )
         }
 
@@ -168,15 +170,21 @@ class MainWindowBloc {
     private fun parseSourceFiles(paths: List<String>) {
         if (paths.isEmpty()) return
 
+        imageVectors.clear()
+        previewIndex = 0
+
         coroutineScope.launch {
             try {
                 callCliTool(paths).also { (imageVectors, errorMessages) ->
-                    addEvent(MainWindowEvent.SourceFilesParsed(imageVectors, errorMessages))
+                    for (imageVector in imageVectors) {
+                        this@MainWindowBloc.imageVectors
+                            .add(imageVector ?: CustomIcons.ErrorCircle)
+                    }
+                    addEvent(MainWindowEvent.SourceFilesParsed(errorMessages))
                 }
             } catch (e: Exception) {
                 addEvent(
                     MainWindowEvent.SourceFilesParsed(
-                        emptyList(),
                         e.stackTraceToString().lines()
                     )
                 )

@@ -11,6 +11,7 @@ plugins {
     id("org.jetbrains.compose") version "1.0.0-beta5"
     id("com.google.protobuf") version "0.8.17"
     id("app.cash.licensee") version "1.2.0"
+    // id("com.autonomousapps.dependency-analysis") version "0.79.0"
 }
 
 java {

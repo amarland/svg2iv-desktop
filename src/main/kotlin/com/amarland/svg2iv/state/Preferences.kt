@@ -40,21 +40,20 @@ private class PropertiesDelegate<T>(
 
     private companion object {
 
-        private val FILE_PATH = Path.of(
-            // aligned with Flutter implementation (`shared_preferences` package)
-            AppDirsFactory.getInstance().getUserDataDir(
-                "svg2iv-desktop", null, "com.amarland", true
-            ),
-            File.separator,
-            "svg2iv.properties"
-        )
+        // aligned with Flutter implementation (`shared_preferences` package)
+        private val DIRECTORY_PATH_STRING = AppDirsFactory.getInstance()
+            .getUserDataDir("svg2iv-desktop", null, "com.amarland", true)
+
+        private val FILE_PATH = Path.of("$DIRECTORY_PATH_STRING${File.separator}svg2iv.properties")
 
         @JvmStatic
         private val properties by lazy(LazyThreadSafetyMode.NONE) {
             Properties().apply {
                 try {
-                    if (!Files.exists(FILE_PATH))
+                    if (!Files.exists(FILE_PATH)) {
+                        Files.createDirectories(Path.of(DIRECTORY_PATH_STRING))
                         Files.createFile(FILE_PATH)
+                    }
                     Files.newInputStream(FILE_PATH).use(::load)
                 } catch (e: IOException) {
                     // well...
