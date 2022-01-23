@@ -1,7 +1,5 @@
 package com.amarland.svg2iv.state
 
-import androidx.compose.ui.graphics.vector.ImageVector
-
 sealed class MainWindowEvent {
 
     object ToggleThemeButtonClicked : MainWindowEvent()
@@ -10,10 +8,7 @@ sealed class MainWindowEvent {
 
     data class SourceFilesSelectionDialogClosed(val paths: List<String>) : MainWindowEvent()
 
-    data class SourceFilesParsed(
-        val imageVectors: List<ImageVector?>,
-        val errorMessages: List<String>
-    ) : MainWindowEvent()
+    class SourceFilesParsed(val errorMessages: List<String>) : MainWindowEvent()
 
     object SelectDestinationDirectoryButtonClicked : MainWindowEvent()
 

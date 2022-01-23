@@ -10,8 +10,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.DefaultFillType
-import androidx.compose.ui.graphics.vector.DefaultGroupName
-import androidx.compose.ui.graphics.vector.DefaultPathName
 import androidx.compose.ui.graphics.vector.DefaultStrokeLineCap
 import androidx.compose.ui.graphics.vector.DefaultStrokeLineJoin
 import androidx.compose.ui.graphics.vector.EmptyPath
@@ -104,7 +102,7 @@ private fun startCliToolProcess(
     val command = executablePath +
             (if (extensionReceiver.isNullOrEmpty()) "" else " -r $extensionReceiver") +
             " -s ${serverSocketAddress.hostAddress}:$serverSocketPort" +
-            " \"" + sourceFilePaths.joinToString(" ") + '"'
+            " \"" + sourceFilePaths.joinToString(",") + '"'
     return Runtime.getRuntime().exec(arrayOf(shellInvocation, commandOption, command))
 }
 
@@ -119,7 +117,8 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
             _pb.NullableImageVector.ValueOrNothingCase.VALUE -> {
                 val imageVector = nullableImageVector.value
                 ImageVector.Builder(
-                    name = imageVector.name.takeIf { it.isNotEmpty() } ?: DefaultGroupName,
+                    name = imageVector.name.takeIf { it.isNotEmpty() }
+                        ?: imageVector.hashCode().toString(16),
                     defaultWidth = imageVector.width.dp,
                     defaultHeight = imageVector.height.dp,
                     viewportWidth = imageVector.viewportWidth,
@@ -156,7 +155,7 @@ private fun ImageVector.Builder.addNodes(nodes: Iterable<_pb.VectorNode>): Image
 
 private fun ImageVector.Builder.addGroup(group: _pb.VectorGroup): ImageVector.Builder {
     group(
-        name = group.id.takeIf { it.isNotEmpty() } ?: DefaultGroupName,
+        name = group.id.takeIf { it.isNotEmpty() } ?: group.hashCode().toString(16),
         rotate = group.rotation,
         pivotX = group.pivotX,
         pivotY = group.pivotY,
@@ -182,7 +181,7 @@ private fun ImageVector.Builder.addPath(path: _pb.VectorPath): ImageVector.Build
             _pb.VectorPath.FillType.NON_ZERO -> PathFillType.NonZero
             else -> DefaultFillType
         },
-        name = path.id.takeIf { it.isNotEmpty() } ?: DefaultPathName,
+        name = path.id.takeIf { it.isNotEmpty() } ?: path.hashCode().toString(16),
         fill = mapBrush(path.fill),
         fillAlpha = path.fillAlpha,
         stroke = mapBrush(path.stroke),
