@@ -1,6 +1,6 @@
 package com.amarland.svg2iv.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
 import com.amarland.svg2iv.outerworld.openDirectorySelectionDialog
@@ -238,13 +240,25 @@ private fun RightPanel(state: MainWindowState) {
             .padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        val previewSizeFraction = 0.65F
-        Checkerboard(Modifier.fillMaxSize(previewSizeFraction))
-        Image(
-            imageVector = state.imageVector,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(previewSizeFraction)
-        )
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(0.65F)
+                .aspectRatio(1F),
+            contentAlignment = Alignment.Center
+        ) {
+            Checkerboard()
+
+            // resorting to drawing manually because of unexplained issues when going back and forth
+            // between different IVs using `VectorPainter`
+            val notPainter = remember { ImageVectorNotPainter() } // not a sub-class of `Painter`
+            val size = DpSize(maxWidth, maxHeight)
+            Canvas(modifier = Modifier.size(size)) {
+                notPainter.drawImageVectorInto(
+                    this,
+                    state.imageVector,
+                    IntSize(size.width.toPx().toInt(), size.height.toPx().toInt())
+                )
+            }
+        }
 
         PreviewSelectionButton(
             icon = Icons.Outlined.KeyboardArrowLeft,
