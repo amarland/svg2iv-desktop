@@ -118,7 +118,7 @@ private fun _pb.ImageVectorCollection.toComposeModels(): List<ImageVector?> {
                 val imageVector = nullableImageVector.value
                 ImageVector.Builder(
                     name = imageVector.name.takeIf { it.isNotEmpty() }
-                        ?: imageVector.hashCode().toString(16),
+                        ?: imageVector.hashCodeToHexString(),
                     defaultWidth = imageVector.width.dp,
                     defaultHeight = imageVector.height.dp,
                     viewportWidth = imageVector.viewportWidth,
@@ -155,7 +155,7 @@ private fun ImageVector.Builder.addNodes(nodes: Iterable<_pb.VectorNode>): Image
 
 private fun ImageVector.Builder.addGroup(group: _pb.VectorGroup): ImageVector.Builder {
     group(
-        name = group.id.takeIf { it.isNotEmpty() } ?: group.hashCode().toString(16),
+        name = group.id.takeIf { it.isNotEmpty() } ?: group.hashCodeToHexString(),
         rotate = group.rotation,
         pivotX = group.pivotX,
         pivotY = group.pivotY,
@@ -181,7 +181,7 @@ private fun ImageVector.Builder.addPath(path: _pb.VectorPath): ImageVector.Build
             _pb.VectorPath.FillType.NON_ZERO -> PathFillType.NonZero
             else -> DefaultFillType
         },
-        name = path.id.takeIf { it.isNotEmpty() } ?: path.hashCode().toString(16),
+        name = path.id.takeIf { it.isNotEmpty() } ?: path.hashCodeToHexString(),
         fill = mapBrush(path.fill),
         fillAlpha = path.fillAlpha,
         stroke = mapBrush(path.stroke),
@@ -320,3 +320,6 @@ private fun mapBrush(brush: _pb.Brush): Brush? {
 }
 
 // endregion ImageVectors from Protobuf
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun Any.hashCodeToHexString() = hashCode().toUInt().toString(16).uppercase()

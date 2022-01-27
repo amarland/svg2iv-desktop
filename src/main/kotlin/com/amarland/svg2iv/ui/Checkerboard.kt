@@ -17,7 +17,7 @@ private const val SQUARE_SIZE_IN_DP = 8
 @Composable
 @Suppress("FunctionName")
 fun Checkerboard(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     squareColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.12F)
 ) {
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
