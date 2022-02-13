@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.Socket
-import com.amarland.svg2iv.outerworld.ProtobufImageVector as _pb
 
+/* TODO: rewrite with JSON instead of Protobuf
 class CliToolCommunicationTest {
 
     @DisplayName(
@@ -177,3 +177,4 @@ class CliToolCommunicationTest {
         Assertions.assertIterableEquals(errorMessages, actualErrorMessages)
     }
 }
+*/
