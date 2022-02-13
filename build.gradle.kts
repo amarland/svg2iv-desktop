@@ -70,3 +70,5 @@ tasks.withType<KotlinCompile>().all {
         freeCompilerArgs = freeCompilerArgs + "-Xopt-in=kotlin.RequiresOptIn"
     }
 }
+
+apply(from = "prebuild.gradle")

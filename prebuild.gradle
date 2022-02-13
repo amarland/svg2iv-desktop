@@ -1,0 +1,43 @@
+import java.nio.file.Files
+import java.nio.file.Path
+
+task buildExecutableIfNotExists(type: Exec) {
+    final rootProject = project.rootProject
+    final executableFile = rootProject.file 'svg2iv.exe'
+    if (!executableFile.exists()) {
+        final properties = new Properties()
+        final propertiesFile = rootProject.file 'local.properties'
+        properties.load(new FileInputStream(propertiesFile))
+        final dartSdkPathAsString = properties.getProperty 'dart.sdk.dir', ''
+        if (dartSdkPathAsString.isEmpty()) {
+            logError "Property 'dart.sdk.dir' is not defined!"
+            return
+        }
+        final dartExecutablePath = Path.of dartSdkPathAsString, 'bin', 'dart'
+        if (!Files.isExecutable(dartExecutablePath)) {
+            logError("'dart.sdk.dir' must point to a valid Dart SDK root directory!")
+            return
+        }
+        final commandLineAppModuleRootDir = properties.getProperty 'cla.rootDir', ''
+        if (commandLineAppModuleRootDir.isEmpty()) {
+            logError "Property 'cla.dir' is not defined!"
+            return
+        }
+        final mainClassFilePath = Path.of commandLineAppModuleRootDir, 'bin', 'main.dart'
+        if (Files.notExists mainClassFilePath) {
+            logError "'cla.dir' must point to the root directory" +
+                    " of module 'cli' of project 'svg2iv'!"
+            return
+        }
+        commandLine dartExecutablePath.toString(), 'compile', 'exe',
+                '--verbosity', 'error',
+                '-o', executableFile.path,
+                mainClassFilePath.toString()
+    }
+}
+
+private void logError(String message) {
+    logger.log LogLevel.ERROR, message
+}
+
+build.dependsOn buildExecutableIfNotExists
