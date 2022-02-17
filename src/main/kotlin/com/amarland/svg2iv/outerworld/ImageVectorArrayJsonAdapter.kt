@@ -30,14 +30,15 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
         while (hasNext()) {
             if (peek() == Token.NULL) {
                 imageVectors += null
+                skipValue()
                 continue
             }
 
             var name = DefaultGroupName
-            var viewportWidth = 0F
-            var viewportHeight = 0F
-            var width: Float? = null
-            var height: Float? = null
+            var viewportWidth = Float.NaN
+            var viewportHeight = Float.NaN
+            var width = Float.NaN
+            var height = Float.NaN
             var tintColor = Color.Unspecified
             var tintBlendMode = DefaultTintBlendMode
             var operations: List<ImageVectorBuilderOperation> = emptyList()
@@ -51,23 +52,32 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                     3 -> width = nextFloat()
                     4 -> height = nextFloat()
                     5 -> tintColor = nextColor()
-                    6 -> tintBlendMode = when (nextString()) {
-                        "srcOver" -> BlendMode.SrcOver
-                        "srcAtop" -> BlendMode.SrcAtop
-                        "modulate" -> BlendMode.Modulate
-                        "screen" -> BlendMode.Screen
-                        "plus" -> BlendMode.Plus
-                        else -> BlendMode.SrcIn
+                    6 -> tintBlendMode = when (selectString(BLEND_MODE_OPTIONS)) {
+                        0 -> BlendMode.SrcIn
+                        1 -> BlendMode.SrcOver
+                        2 -> BlendMode.SrcAtop
+                        3 -> BlendMode.Modulate
+                        4 -> BlendMode.Screen
+                        5 -> BlendMode.Plus
+                        else -> throw JsonDataException(
+                            "$path: ${IMAGE_VECTOR_OPTIONS.strings()[6]}"
+                        )
                     }
                     7 -> operations = readVectorNodes()
+                    else -> skipValue()
                 }
             }
             endObject()
 
+            if (viewportWidth.isNaN() || viewportHeight.isNaN())
+                throw JsonDataException("$path: invalid or missing values for viewport!")
+
+            if (width.isNaN()) width = viewportWidth
+            if (height.isNaN()) height = viewportHeight
             imageVectors += ImageVector.Builder(
                 name,
-                defaultWidth = (width ?: viewportWidth).dp,
-                defaultHeight = (height ?: viewportHeight).dp,
+                defaultWidth = width.dp,
+                defaultHeight = height.dp,
                 viewportWidth, viewportHeight,
                 tintColor, tintBlendMode
             ).apply { applyOperations(operations) }.build()
@@ -85,7 +95,9 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
         val operations = mutableListOf<ImageVectorBuilderOperation>()
         while (hasNext()) {
             beginObject()
-            val isVectorGroup = peekJson().nextName() in VECTOR_GROUP_OPTIONS.strings()
+            val isVectorGroup = peekJson().use { peeked ->
+                peeked.selectName(VECTOR_GROUP_OPTIONS) > -1
+            }
             operations += if (isVectorGroup) readVectorGroup() else readVectorPath()
             endObject()
         }
@@ -117,6 +129,7 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                 7 -> translationY = nextFloat()
                 8 -> clipPathData = nextPathNodes()
                 9 -> operations = readVectorNodes()
+                else -> skipValue()
             }
         }
 
@@ -156,28 +169,29 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                 3 -> stroke = nextBrush()
                 4 -> strokeAlpha = nextFloat()
                 5 -> strokeLineWidth = nextFloat()
-                6 -> strokeLineCap = when (nextString()) {
-                    "butt" -> StrokeCap.Butt
-                    "round" -> StrokeCap.Round
-                    "square" -> StrokeCap.Square
-                    else -> DefaultStrokeLineCap
+                6 -> strokeLineCap = when (selectString(STROKE_CAP_OPTIONS)) {
+                    0 -> StrokeCap.Butt
+                    1 -> StrokeCap.Round
+                    2 -> StrokeCap.Square
+                    else -> throw JsonDataException("$path: ${VECTOR_PATH_OPTIONS.strings()[6]}")
                 }
-                7 -> strokeLineJoin = when (nextString()) {
-                    "bevel" -> StrokeJoin.Bevel
-                    "miter" -> StrokeJoin.Miter
-                    "round" -> StrokeJoin.Round
-                    else -> DefaultStrokeLineJoin
+                7 -> strokeLineJoin = when (selectString(STROKE_JOIN_OPTIONS)) {
+                    0 -> StrokeJoin.Bevel
+                    1 -> StrokeJoin.Miter
+                    2 -> StrokeJoin.Round
+                    else -> throw JsonDataException("$path: ${VECTOR_PATH_OPTIONS.strings()[7]}")
                 }
                 8 -> strokeLineMiter = nextFloat()
-                9 -> fillType = when (nextString()) {
-                    "nonZero" -> PathFillType.NonZero
-                    "evenOdd" -> PathFillType.EvenOdd
-                    else -> DefaultFillType
+                9 -> fillType = when (selectString(FILL_TYPE_OPTIONS)) {
+                    0 -> PathFillType.NonZero
+                    1 -> PathFillType.EvenOdd
+                    else -> throw JsonDataException("$path: ${VECTOR_PATH_OPTIONS.strings()[9]}")
                 }
                 10 -> trimPathStart = nextFloat()
                 11 -> trimPathEnd = nextFloat()
                 12 -> trimPathOffset = nextFloat()
                 13 -> pathNodes = nextPathNodes()
+                else -> skipValue()
             }
         }
 
@@ -196,25 +210,110 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
 
     private fun JsonReader.nextPathNodes(): List<PathNode> {
         beginArray()
+        val arguments = FloatArray(7) { Float.NaN }
         val nodes = mutableListOf<PathNode>()
         while (hasNext()) {
-            var commandName: String? = null
-            val arguments = mutableListOf<Any>()
+            var commandIndex = -1
             beginObject()
-            when (selectName(PATH_NODE_OPTIONS)) {
-                0 -> commandName = nextString()
-                1 -> {
-                    beginArray()
-                    while (hasNext()) {
-                        arguments += if (peek() == Token.BOOLEAN) nextBoolean() else nextFloat()
+            while (hasNext()) {
+                when (selectName(PATH_NODE_OPTIONS)) {
+                    0 -> commandIndex = selectString(PATH_NODE_COMMAND_OPTIONS)
+                    1 -> {
+                        beginArray()
+                        var index = -1
+                        while (hasNext()) {
+                            if (index++ > arguments.lastIndex)
+                                throw JsonDataException("$path: too many arguments")
+                            arguments[index] =
+                                if ((commandIndex == 16 || commandIndex == 17) &&
+                                    (index == 3 || index == 4) // boolean flags for arcs
+                                ) {
+                                    if (peek() == Token.BOOLEAN)
+                                        if (nextBoolean()) 1F else 0F
+                                    else throw JsonDataException(
+                                        "$path: boolean argument expected at index $index"
+                                    )
+                                } else nextFloat()
+                        }
+                        endArray()
+                        repeat(arguments.lastIndex - index) { arguments[++index] = Float.NaN }
                     }
-                    endArray()
+                    else -> skipValue()
                 }
             }
-            if (commandName.isNullOrBlank()) {
-                throw JsonDataException("${PATH_NODE_OPTIONS.strings()[1]}: $commandName")
+            endObject()
+
+            fun getArgumentAt(index: Int) =
+                arguments[index].also {
+                    if (it.isNaN()) throw JsonDataException(
+                        "$path: too few arguments for " +
+                                PATH_NODE_COMMAND_OPTIONS.strings()[commandIndex]
+                    )
+                }
+
+            nodes += when (commandIndex) {
+                0 -> PathNode.MoveTo(getArgumentAt(0), getArgumentAt(1))
+
+                1 -> PathNode.RelativeMoveTo(getArgumentAt(0), getArgumentAt(1))
+
+                2 -> PathNode.LineTo(getArgumentAt(0), getArgumentAt(1))
+
+                3 -> PathNode.RelativeLineTo(getArgumentAt(0), getArgumentAt(1))
+
+                4 -> PathNode.HorizontalTo(getArgumentAt(0))
+
+                5 -> PathNode.RelativeHorizontalTo(getArgumentAt(0))
+
+                6 -> PathNode.VerticalTo(getArgumentAt(0))
+
+                7 -> PathNode.RelativeVerticalTo(getArgumentAt(0))
+
+                8 -> PathNode.CurveTo(
+                    getArgumentAt(0), getArgumentAt(1),
+                    getArgumentAt(2), getArgumentAt(3),
+                    getArgumentAt(4), getArgumentAt(5)
+                )
+                9 -> PathNode.RelativeCurveTo(
+                    getArgumentAt(0), getArgumentAt(1),
+                    getArgumentAt(2), getArgumentAt(3),
+                    getArgumentAt(4), getArgumentAt(5)
+                )
+                10 -> PathNode.ReflectiveCurveTo(
+                    getArgumentAt(0), getArgumentAt(1), getArgumentAt(2), getArgumentAt(3)
+                )
+                11 -> PathNode.RelativeReflectiveCurveTo(
+                    getArgumentAt(0), getArgumentAt(1), getArgumentAt(2), getArgumentAt(3)
+                )
+                12 -> PathNode.QuadTo(
+                    getArgumentAt(0), getArgumentAt(1),
+                    getArgumentAt(2), getArgumentAt(3)
+                )
+                13 -> PathNode.RelativeQuadTo(
+                    getArgumentAt(0), getArgumentAt(1),
+                    getArgumentAt(2), getArgumentAt(3)
+                )
+
+                14 -> PathNode.ReflectiveQuadTo(getArgumentAt(0), getArgumentAt(1))
+
+                15 -> PathNode.RelativeReflectiveQuadTo(getArgumentAt(0), getArgumentAt(1))
+
+                16 -> PathNode.ArcTo(
+                    getArgumentAt(0), getArgumentAt(1),
+                    getArgumentAt(2),
+                    getArgumentAt(3) != 0F, getArgumentAt(4) != 0F,
+                    getArgumentAt(5), getArgumentAt(6)
+                )
+                17 -> PathNode.RelativeArcTo(
+                    getArgumentAt(0), getArgumentAt(1),
+                    getArgumentAt(2),
+                    getArgumentAt(3) != 0F, getArgumentAt(4) != 0F,
+                    getArgumentAt(5), getArgumentAt(6)
+                )
+
+                18 -> PathNode.Close
+
+                else -> throw JsonDataException("$path: ${PATH_NODE_COMMAND_OPTIONS.strings()[0]}")
             }
-            nodes += getPathNodeForCommandNameAndArguments(commandName, arguments)
         }
         endArray()
         return nodes
@@ -239,7 +338,13 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
             beginObject()
             while (hasNext()) {
                 when (selectName(GRADIENT_OPTIONS)) {
-                    0 -> isLinear = nextString() == "linear"
+                    0 -> isLinear = when (selectString(GRADIENT_TYPE_OPTIONS)) {
+                        0 -> true
+                        1 -> false
+                        else -> throw JsonDataException(
+                            "$path: ${VECTOR_PATH_OPTIONS.strings()[0]}"
+                        )
+                    }
                     1 -> {
                         beginArray()
                         while (hasNext()) colors += nextColor()
@@ -257,19 +362,26 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                     7 -> centerX = nextFloat()
                     8 -> centerY = nextFloat()
                     9 -> radius = nextFloat()
-                    10 -> tileMode = when (nextString()) {
-                        "repeated" -> TileMode.Repeated
-                        "mirror" -> TileMode.Mirror
-                        else -> TileMode.Clamp
+                    10 -> tileMode = when (selectString(TILE_MODE_OPTIONS)) {
+                        0 -> TileMode.Clamp
+                        1 -> TileMode.Repeated
+                        2 -> TileMode.Mirror
+                        else -> throw JsonDataException(
+                            "$path: ${VECTOR_PATH_OPTIONS.strings()[10]}"
+                        )
                     }
+                    else -> skipValue()
                 }
             }
             endObject()
 
+            if (stops.isNotEmpty() && stops.size != colors.size)
+                throw JsonDataException("$path: ${stops.size} stops and ${colors.size} colors")
+
             val colorCount = colors.size
-            if (stops.isEmpty()) {
+            if (stops.isEmpty())
                 colors.indices.mapTo(stops) { index -> index.toFloat() / colorCount }
-            }
+
             val colorStops = Array(colorCount) { index -> stops[index] to colors[index] }
             return if (isLinear) {
                 Brush.linearGradient(
@@ -293,18 +405,23 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
 
     private fun JsonReader.nextColor(): Color {
         beginArray()
-        val argb = (4 downTo 0).sumOf { position -> (nextInt() shl (position * 8)).toLong() }
+        val argb = (3 downTo 0).sumOf { position ->
+            val int = if (peek() == Token.NUMBER) nextInt() else -1
+            if (int !in 0..255) {
+                throw JsonDataException(
+                    """$path:
+                       |    Colors must be declared as an array of 4 integers""".trimMargin() +
+                            " comprised between 0 and 255 that represent the ARGB values."
+                )
+            }
+            return@sumOf (int shl (position * 8)).toLong()
+        }
         endArray()
         return Color(argb)
     }
 
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun ImageVector.Builder.applyOperations(
-        operations: List<ImageVectorBuilderOperation>
-    ) {
-        for (operation in operations) {
-            operation(this)
-        }
+    private fun ImageVector.Builder.applyOperations(operations: List<ImageVectorBuilderOperation>) {
+        for (operation in operations) operation(this)
     }
 
     private companion object {
@@ -312,7 +429,7 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
         @JvmStatic
         private val IMAGE_VECTOR_OPTIONS =
             Options.of(
-                "name",
+                "vectorName",
                 "viewportWidth",
                 "viewportHeight",
                 "width",
@@ -323,9 +440,28 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
             )
 
         @JvmStatic
+        private val BLEND_MODE_OPTIONS =
+            Options.of("srcIn", "srcOver", "srcAtop", "modulate", "screen", "plus")
+
+        @JvmStatic
+        private val STROKE_CAP_OPTIONS = Options.of("butt", "round", "square")
+
+        @JvmStatic
+        private val STROKE_JOIN_OPTIONS = Options.of("bevel", "miter", "round")
+
+        @JvmStatic
+        private val FILL_TYPE_OPTIONS = Options.of("nonZero", "evenOdd")
+
+        @JvmStatic
+        private val GRADIENT_TYPE_OPTIONS = Options.of("linear", "radial")
+
+        @JvmStatic
+        private val TILE_MODE_OPTIONS = Options.of("clamp", "repeated", "mirror")
+
+        @JvmStatic
         private val VECTOR_GROUP_OPTIONS =
             Options.of(
-                "id",
+                "groupName",
                 "rotation",
                 "pivotX",
                 "pivotY",
@@ -340,7 +476,7 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
         @JvmStatic
         private val VECTOR_PATH_OPTIONS =
             Options.of(
-                "id",
+                "pathName",
                 "fill",
                 "fillAlpha",
                 "stroke",
@@ -360,6 +496,30 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
         private val PATH_NODE_OPTIONS = Options.of("command", "arguments")
 
         @JvmStatic
+        private val PATH_NODE_COMMAND_OPTIONS =
+            Options.of(
+                "moveTo",
+                "relativeMoveTo",
+                "lineTo",
+                "relativeLineTo",
+                "horizontalLineTo",
+                "relativeHorizontalLineTo",
+                "verticalLineTo",
+                "relativeVerticalLineTo",
+                "curveTo",
+                "relativeCurveTo",
+                "smoothCurveTo",
+                "relativeSmoothCurveTo",
+                "quadraticBezierCurveTo",
+                "relativeQuadraticBezierCurveTo",
+                "smoothQuadraticBezierCurveTo",
+                "relativeSmoothQuadraticBezierCurveTo",
+                "arcTo",
+                "relativeArcTo",
+                "close"
+            )
+
+        @JvmStatic
         private val GRADIENT_OPTIONS =
             Options.of(
                 "type",
@@ -374,92 +534,5 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                 "radius",
                 "tileMode"
             )
-
-        @Suppress("UNCHECKED_CAST")
-        @JvmStatic
-        private fun getPathNodeForCommandNameAndArguments(
-            commandName: String,
-            arguments: List<Any>
-        ): PathNode {
-            if ("rcTo" in commandName) {
-                return when (commandName) {
-                    "arcTo" ->
-                        PathNode.ArcTo(
-                            arguments[0] as Float, arguments[1] as Float,
-                            arguments[2] as Float,
-                            arguments[3] as Boolean, arguments[4] as Boolean,
-                            arguments[5] as Float, arguments[6] as Float
-                        )
-                    /* "relativeArcTo", */
-                    else ->
-                        PathNode.RelativeArcTo(
-                            arguments[0] as Float, arguments[1] as Float,
-                            arguments[2] as Float,
-                            arguments[3] as Boolean, arguments[4] as Boolean,
-                            arguments[5] as Float, arguments[6] as Float
-                        )
-                }
-            }
-            arguments as List<Float>
-            return when (commandName) {
-                "moveTo" -> PathNode.MoveTo(arguments[0], arguments[1])
-
-                "relativeMoveTo" -> PathNode.RelativeMoveTo(arguments[0], arguments[1])
-
-                "lineTo" -> PathNode.LineTo(arguments[0], arguments[1])
-
-                "relativeLineTo" -> PathNode.RelativeLineTo(arguments[0], arguments[1])
-
-                "horizontalLineTo" -> PathNode.HorizontalTo(arguments[0])
-
-                "relativeHorizontalLineTo" -> PathNode.RelativeHorizontalTo(arguments[0])
-
-                "verticalLineTo" -> PathNode.VerticalTo(arguments[0])
-
-                "relativeVerticalLineTo" -> PathNode.RelativeVerticalTo(arguments[0])
-
-                "curveTo" ->
-                    PathNode.CurveTo(
-                        arguments[0], arguments[1],
-                        arguments[2], arguments[3],
-                        arguments[4], arguments[5]
-                    )
-
-                "relativeCurveTo" ->
-                    PathNode.RelativeCurveTo(
-                        arguments[0], arguments[1],
-                        arguments[2], arguments[3],
-                        arguments[4], arguments[5]
-                    )
-
-                "smoothCurveTo" ->
-                    PathNode.ReflectiveCurveTo(
-                        arguments[0], arguments[1],
-                        arguments[2], arguments[3]
-                    )
-
-                "relativeSmoothCurveTo" ->
-                    PathNode.RelativeReflectiveCurveTo(
-                        arguments[0], arguments[1],
-                        arguments[2], arguments[3]
-                    )
-
-                "quadraticBezierCurveTo" ->
-                    PathNode.QuadTo(arguments[0], arguments[1], arguments[2], arguments[3])
-
-                "relativeQuadraticBezierCurveTo" ->
-                    PathNode.RelativeQuadTo(arguments[0], arguments[1], arguments[2], arguments[3])
-
-                "smoothQuadraticBezierCurveTo" ->
-                    PathNode.ReflectiveQuadTo(arguments[0], arguments[1])
-
-                "relativeSmoothQuadraticBezierCurveTo" ->
-                    PathNode.RelativeReflectiveQuadTo(arguments[0], arguments[1])
-
-                "close" -> PathNode.Close
-
-                else -> throw IllegalArgumentException("commandName: $commandName")
-            }
-        }
     }
 }
