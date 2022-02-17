@@ -8,19 +8,21 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathNode
+import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.unit.dp
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import kotlinx.coroutines.runBlocking
+import okio.buffer
+import okio.sink
+import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.net.Socket
 
-/* TODO: rewrite with JSON instead of Protobuf
 class CliToolCommunicationTest {
 
     @DisplayName(
@@ -29,87 +31,70 @@ class CliToolCommunicationTest {
     )
     @Test
     fun startCliToolProcess() {
-        val sourceImageVectors = _pb.ImageVectorCollection.newBuilder()
-            .addNullableImageVectors(
-                _pb.NullableImageVector.newBuilder()
-                    .setValue(
-                        _pb.ImageVector.newBuilder()
-                            .setName("test_vector")
-                            .setViewportWidth(100F).setViewportHeight(50F)
-                            .setWidth(100F).setHeight(50F)
-                            .setTintBlendMode(_pb.BlendMode.SRC_IN)
-                            .setTintColor(Color.Unspecified.toArgb())
-                            .addNodes(
-                                _pb.VectorNode.newBuilder().setGroup(
-                                    _pb.VectorGroup.newBuilder()
-                                        .setId("test_group")
-                                        .setRotation(270F).setPivotX(25F).setPivotY(25F)
-                                        .setScaleX(1.5F).setScaleY(1.5F)
-                                        .setTranslationX(10F).setTranslationY(20F)
-                                        .addClipPathData(
-                                            _pb.PathNode.newBuilder()
-                                                .setCommand(_pb.PathNode.Command.VERTICAL_LINE_TO)
-                                                .addArguments(
-                                                    _pb.PathNode.Argument.newBuilder()
-                                                        .setCoordinate(75F)
-                                                )
-                                        )
-                                        .addNodes(
-                                            _pb.VectorNode.newBuilder().setPath(
-                                                _pb.VectorPath.newBuilder()
-                                                    .setId("test_path")
-                                                    .addPathNodes(
-                                                        _pb.PathNode.newBuilder()
-                                                            .setCommand(
-                                                                _pb.PathNode.Command
-                                                                    .HORIZONTAL_LINE_TO
-                                                            )
-                                                            .addArguments(
-                                                                _pb.PathNode.Argument.newBuilder()
-                                                                    .setCoordinate(25F)
-                                                            )
-                                                    )
-                                                    .setFill(
-                                                        _pb.Brush.newBuilder()
-                                                            .setLinearGradient(
-                                                                _pb.Gradient.newBuilder()
-                                                                    .addColors(Color.Red.toArgb())
-                                                                    .addColors(Color.Green.toArgb())
-                                                                    .addColors(Color.Blue.toArgb())
-                                                                    .addStops(0.2F)
-                                                                    .addStops(0.5F)
-                                                                    .addStops(0.8F)
-                                                                    .setStartX(10F)
-                                                                    .setStartY(90F)
-                                                                    .setEndX(20F)
-                                                                    .setEndY(80F)
-                                                                    .setTileMode(
-                                                                        _pb.Gradient.TileMode.CLAMP
-                                                                    )
-                                                            )
-                                                    )
-                                                    .setFillAlpha(0.85F)
-                                                    .setStroke(
-                                                        _pb.Brush.newBuilder()
-                                                            .setSolidColor(Color.DarkGray.toArgb())
-                                                    )
-                                                    .setStrokeAlpha(0.45F)
-                                                    .setStrokeLineWidth(3F)
-                                                    .setStrokeLineCap(
-                                                        _pb.VectorPath.StrokeCap.CAP_BUTT
-                                                    )
-                                                    .setStrokeLineJoin(
-                                                        _pb.VectorPath.StrokeJoin.JOIN_MITER
-                                                    )
-                                                    .setStrokeLineMiter(0.6F)
-                                                    .setTrimPathEnd(1F) // default value for `ImageVector.trimPathEnd`
-                                                    .setFillType(_pb.VectorPath.FillType.NON_ZERO)
-                                            )
-                                        )
-                                )
-                            )
-                    )
-            ).build()
+        @Language("JSON")
+        val sourceJson = """
+            |[
+            |    {
+            |        "vectorName": "test_vector",
+            |        "width": 200.0,
+            |        "height": 200.0,
+            |        "viewportWidth": 100.0,
+            |        "viewportHeight": 100.0,
+            |        "nodes": [
+            |            {
+            |                "groupName": "test_group",
+            |                "rotation": 270.0,
+            |                "pivotX": 25.0,
+            |                "pivotY": 25.0,
+            |                "scaleX": 1.5,
+            |                "scaleY": 1.5,
+            |                "translationX": 10.0,
+            |                "translationY": 20.0,
+            |                "clipPathData": [
+            |                   {
+            |                       "command": "verticalLineTo",
+            |                       "arguments": [75.0]
+            |                   }
+            |                ],
+            |                "nodes": [
+            |                   {
+            |                       "pathNodes": [
+            |                           {
+            |                               "command": "horizontalLineTo",
+            |                               "arguments": [25.0]
+            |                           }
+            |                       ],
+            |                       "fillType": "nonZero",
+            |                       "pathName": "test_path",
+            |                       "fill": {
+            |                           "type": "linear",
+            |                           "colors": [
+            |                               [255, 255, 0, 0],
+            |                               [255, 0, 255, 0],
+            |                               [255, 0, 0, 255]
+            |                           ],
+            |                           "stops": [0.2, 0.5, 0.8],
+            |                           "startX": 10.0,
+            |                           "startY": 90.0,
+            |                           "endX": 20.0,
+            |                           "endY": 80.0,
+            |                           "tileMode": "clamp"
+            |                       },
+            |                       "fillAlpha": 0.85,
+            |                       "stroke": [255, 68, 68, 68],
+            |                       "strokeAlpha": 0.45,
+            |                       "strokeLineWidth": 3.0,
+            |                       "strokeLineCap": "butt",
+            |                       "strokeLineJoin": "miter",
+            |                       "strokeLineMiter": 0.6
+            |                   }
+            |                ]
+            |            }
+            |        ]
+            |    },
+            |    null
+            |]
+        """.trimMargin()
 
         val errorMessages = listOf(
             "Error message #1",
@@ -120,17 +105,16 @@ class CliToolCommunicationTest {
         val expectedImageVectors = listOf(
             ImageVector.Builder(
                 name = "test_vector",
-                defaultWidth = 100F.dp, defaultHeight = 50F.dp,
-                viewportWidth = 100F, viewportHeight = 50F
-            )
-                .addGroup(
-                    name = "test_group",
-                    rotate = 270F, pivotX = 25F, pivotY = 25F,
-                    scaleX = 1.5F, scaleY = 1.5F,
-                    translationX = 10F, translationY = 20F,
-                    clipPathData = listOf(PathNode.VerticalTo(75F))
-                )
-                .addPath(
+                defaultWidth = 200F.dp, defaultHeight = 200F.dp,
+                viewportWidth = 100F, viewportHeight = 100F
+            ).group(
+                name = "test_group",
+                rotate = 270F, pivotX = 25F, pivotY = 25F,
+                scaleX = 1.5F, scaleY = 1.5F,
+                translationX = 10F, translationY = 20F,
+                clipPathData = listOf(PathNode.VerticalTo(75F))
+            ) {
+                addPath(
                     pathData = listOf(PathNode.HorizontalTo(25F)),
                     pathFillType = PathFillType.NonZero,
                     name = "test_path",
@@ -142,14 +126,15 @@ class CliToolCommunicationTest {
                         tileMode = TileMode.Clamp
                     ),
                     fillAlpha = 0.85F,
-                    stroke = SolidColor(Color.DarkGray),
+                    stroke = SolidColor(Color(68, 68, 68)),
                     strokeAlpha = 0.45F,
                     strokeLineWidth = 3F,
                     strokeLineCap = StrokeCap.Butt,
                     strokeLineJoin = StrokeJoin.Miter,
                     strokeLineMiter = 0.6F
                 )
-                .build()
+            }.build(),
+            null
         )
 
         val errorMessageStream = errorMessages
@@ -166,7 +151,9 @@ class CliToolCommunicationTest {
                         on { waitFor() } doReturn 0
                     }.also {
                         Socket(address, port).use { client ->
-                            sourceImageVectors.writeTo(client.getOutputStream())
+                            client.getOutputStream().sink().buffer()
+                                .writeUtf8(sourceJson)
+                                .flush()
                         }
                     }
                 }
@@ -177,4 +164,3 @@ class CliToolCommunicationTest {
         Assertions.assertIterableEquals(errorMessages, actualErrorMessages)
     }
 }
-*/

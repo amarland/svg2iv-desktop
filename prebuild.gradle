@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -13,19 +15,20 @@ task buildExecutableIfNotExists(type: Exec) {
             logError "Property 'dart.sdk.dir' is not defined!"
             return
         }
-        final dartExecutablePath = Path.of dartSdkPathAsString, 'bin', 'dart'
+        final dartExecutableName = Os.isFamily(Os.FAMILY_WINDOWS) ? 'dart.exe' : 'dart'
+        final dartExecutablePath = Path.of dartSdkPathAsString, 'bin', dartExecutableName
         if (!Files.isExecutable(dartExecutablePath)) {
             logError("'dart.sdk.dir' must point to a valid Dart SDK root directory!")
             return
         }
         final commandLineAppModuleRootDir = properties.getProperty 'cla.rootDir', ''
         if (commandLineAppModuleRootDir.isEmpty()) {
-            logError "Property 'cla.dir' is not defined!"
+            logError "Property 'cla.rootDir' is not defined!"
             return
         }
         final mainClassFilePath = Path.of commandLineAppModuleRootDir, 'bin', 'main.dart'
         if (Files.notExists mainClassFilePath) {
-            logError "'cla.dir' must point to the root directory" +
+            logError "'cla.rootDir' must point to the root directory" +
                     " of module 'cli' of project 'svg2iv'!"
             return
         }
