@@ -210,6 +210,7 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
 
     private fun JsonReader.nextPathNodes(): List<PathNode> {
         beginArray()
+        // NaNs are forbidden in JSON
         val arguments = FloatArray(7) { Float.NaN }
         val nodes = mutableListOf<PathNode>()
         while (hasNext()) {
@@ -219,6 +220,10 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                 when (selectName(PATH_NODE_OPTIONS)) {
                     0 -> commandIndex = selectString(PATH_NODE_COMMAND_OPTIONS)
                     1 -> {
+                        arguments.fill(Float.NaN)
+
+                        if (peek() == Token.NULL) continue
+
                         beginArray()
                         var index = -1
                         while (hasNext()) {
@@ -236,7 +241,6 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                                 } else nextFloat()
                         }
                         endArray()
-                        repeat(arguments.lastIndex - index) { arguments[++index] = Float.NaN }
                     }
                     else -> skipValue()
                 }
@@ -251,70 +255,121 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
                     )
                 }
 
+            val argumentCount: Int
             nodes += when (commandIndex) {
-                0 -> PathNode.MoveTo(getArgumentAt(0), getArgumentAt(1))
-
-                1 -> PathNode.RelativeMoveTo(getArgumentAt(0), getArgumentAt(1))
-
-                2 -> PathNode.LineTo(getArgumentAt(0), getArgumentAt(1))
-
-                3 -> PathNode.RelativeLineTo(getArgumentAt(0), getArgumentAt(1))
-
-                4 -> PathNode.HorizontalTo(getArgumentAt(0))
-
-                5 -> PathNode.RelativeHorizontalTo(getArgumentAt(0))
-
-                6 -> PathNode.VerticalTo(getArgumentAt(0))
-
-                7 -> PathNode.RelativeVerticalTo(getArgumentAt(0))
-
-                8 -> PathNode.CurveTo(
-                    getArgumentAt(0), getArgumentAt(1),
-                    getArgumentAt(2), getArgumentAt(3),
-                    getArgumentAt(4), getArgumentAt(5)
-                )
-                9 -> PathNode.RelativeCurveTo(
-                    getArgumentAt(0), getArgumentAt(1),
-                    getArgumentAt(2), getArgumentAt(3),
-                    getArgumentAt(4), getArgumentAt(5)
-                )
-                10 -> PathNode.ReflectiveCurveTo(
-                    getArgumentAt(0), getArgumentAt(1), getArgumentAt(2), getArgumentAt(3)
-                )
-                11 -> PathNode.RelativeReflectiveCurveTo(
-                    getArgumentAt(0), getArgumentAt(1), getArgumentAt(2), getArgumentAt(3)
-                )
-                12 -> PathNode.QuadTo(
-                    getArgumentAt(0), getArgumentAt(1),
-                    getArgumentAt(2), getArgumentAt(3)
-                )
-                13 -> PathNode.RelativeQuadTo(
-                    getArgumentAt(0), getArgumentAt(1),
-                    getArgumentAt(2), getArgumentAt(3)
-                )
-
-                14 -> PathNode.ReflectiveQuadTo(getArgumentAt(0), getArgumentAt(1))
-
-                15 -> PathNode.RelativeReflectiveQuadTo(getArgumentAt(0), getArgumentAt(1))
-
-                16 -> PathNode.ArcTo(
-                    getArgumentAt(0), getArgumentAt(1),
-                    getArgumentAt(2),
-                    getArgumentAt(3) != 0F, getArgumentAt(4) != 0F,
-                    getArgumentAt(5), getArgumentAt(6)
-                )
-                17 -> PathNode.RelativeArcTo(
-                    getArgumentAt(0), getArgumentAt(1),
-                    getArgumentAt(2),
-                    getArgumentAt(3) != 0F, getArgumentAt(4) != 0F,
-                    getArgumentAt(5), getArgumentAt(6)
-                )
-
-                18 -> PathNode.Close
-
-                else -> throw JsonDataException("$path: ${PATH_NODE_COMMAND_OPTIONS.strings()[0]}")
+                0 -> {
+                    argumentCount = 2
+                    PathNode.MoveTo(getArgumentAt(0), getArgumentAt(1))
+                }
+                1 -> {
+                    argumentCount = 2
+                    PathNode.RelativeMoveTo(getArgumentAt(0), getArgumentAt(1))
+                }
+                2 -> {
+                    argumentCount = 2
+                    PathNode.LineTo(getArgumentAt(0), getArgumentAt(1))
+                }
+                3 -> {
+                    argumentCount = 2
+                    PathNode.RelativeLineTo(getArgumentAt(0), getArgumentAt(1))
+                }
+                4 -> {
+                    argumentCount = 1
+                    PathNode.HorizontalTo(getArgumentAt(0))
+                }
+                5 -> {
+                    argumentCount = 1
+                    PathNode.RelativeHorizontalTo(getArgumentAt(0))
+                }
+                6 -> {
+                    argumentCount = 1
+                    PathNode.VerticalTo(getArgumentAt(0))
+                }
+                7 -> {
+                    argumentCount = 1
+                    PathNode.RelativeVerticalTo(getArgumentAt(0))
+                }
+                8 -> {
+                    argumentCount = 6
+                    PathNode.CurveTo(
+                        getArgumentAt(0), getArgumentAt(1),
+                        getArgumentAt(2), getArgumentAt(3),
+                        getArgumentAt(4), getArgumentAt(5)
+                    )
+                }
+                9 -> {
+                    argumentCount = 6
+                    PathNode.RelativeCurveTo(
+                        getArgumentAt(0), getArgumentAt(1),
+                        getArgumentAt(2), getArgumentAt(3),
+                        getArgumentAt(4), getArgumentAt(5)
+                    )
+                }
+                10 -> {
+                    argumentCount = 4
+                    PathNode.ReflectiveCurveTo(
+                        getArgumentAt(0), getArgumentAt(1), getArgumentAt(2), getArgumentAt(3)
+                    )
+                }
+                11 -> {
+                    argumentCount = 4
+                    PathNode.RelativeReflectiveCurveTo(
+                        getArgumentAt(0), getArgumentAt(1), getArgumentAt(2), getArgumentAt(3)
+                    )
+                }
+                12 -> {
+                    argumentCount = 4
+                    PathNode.QuadTo(
+                        getArgumentAt(0), getArgumentAt(1),
+                        getArgumentAt(2), getArgumentAt(3)
+                    )
+                }
+                13 -> {
+                    argumentCount = 4
+                    PathNode.RelativeQuadTo(
+                        getArgumentAt(0), getArgumentAt(1),
+                        getArgumentAt(2), getArgumentAt(3)
+                    )
+                }
+                14 -> {
+                    argumentCount = 2
+                    PathNode.ReflectiveQuadTo(getArgumentAt(0), getArgumentAt(1))
+                }
+                15 -> {
+                    argumentCount = 2
+                    PathNode.RelativeReflectiveQuadTo(getArgumentAt(0), getArgumentAt(1))
+                }
+                16 -> {
+                    argumentCount = 7
+                    PathNode.ArcTo(
+                        getArgumentAt(0), getArgumentAt(1),
+                        getArgumentAt(2),
+                        getArgumentAt(3) != 0F, getArgumentAt(4) != 0F,
+                        getArgumentAt(5), getArgumentAt(6)
+                    )
+                }
+                17 -> {
+                    argumentCount = 7
+                    PathNode.RelativeArcTo(
+                        getArgumentAt(0), getArgumentAt(1),
+                        getArgumentAt(2),
+                        getArgumentAt(3) != 0F, getArgumentAt(4) != 0F,
+                        getArgumentAt(5), getArgumentAt(6)
+                    )
+                }
+                18 -> {
+                    argumentCount = 0
+                    PathNode.Close
+                }
+                else -> {
+                    throw JsonDataException("$path: ${PATH_NODE_COMMAND_OPTIONS.strings()[0]}")
+                }
             }
+
+            if (argumentCount < arguments.size && !arguments[argumentCount].isNaN())
+                throw JsonDataException("$path: too many arguments")
         }
+
         endArray()
         return nodes
     }
@@ -375,28 +430,45 @@ class ImageVectorArrayJsonAdapter : JsonAdapter<List<ImageVector?>>() {
             }
             endObject()
 
-            if (stops.isNotEmpty() && stops.size != colors.size)
-                throw JsonDataException("$path: ${stops.size} stops and ${colors.size} colors")
-
             val colorCount = colors.size
-            if (stops.isEmpty())
-                colors.indices.mapTo(stops) { index -> index.toFloat() / colorCount }
+            val areStopsDefined = stops.isNotEmpty()
 
-            val colorStops = Array(colorCount) { index -> stops[index] to colors[index] }
-            return if (isLinear) {
-                Brush.linearGradient(
-                    *colorStops,
-                    start = Offset(startX, startY),
-                    end = Offset(endX, endY),
-                    tileMode = tileMode
-                )
+            if (areStopsDefined && stops.size != colorCount)
+                throw JsonDataException("$path: ${stops.size} stops and $colorCount colors")
+
+            if (areStopsDefined) {
+                val colorStops = Array(colorCount) { index -> stops[index] to colors[index] }
+                return if (isLinear) {
+                    Brush.linearGradient(
+                        colorStops = colorStops,
+                        start = Offset(startX, startY),
+                        end = Offset(endX, endY),
+                        tileMode
+                    )
+                } else {
+                    Brush.radialGradient(
+                        colorStops = colorStops,
+                        center = Offset(centerX, centerY),
+                        radius,
+                        tileMode
+                    )
+                }
             } else {
-                Brush.radialGradient(
-                    *colorStops,
-                    center = Offset(centerX, centerY),
-                    radius = radius,
-                    tileMode = tileMode
-                )
+                return if (isLinear) {
+                    Brush.linearGradient(
+                        colors,
+                        start = Offset(startX, startY),
+                        end = Offset(endX, endY),
+                        tileMode
+                    )
+                } else {
+                    Brush.radialGradient(
+                        colors,
+                        center = Offset(centerX, centerY),
+                        radius,
+                        tileMode
+                    )
+                }
             }
         }
     }

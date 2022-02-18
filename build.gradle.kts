@@ -1,5 +1,4 @@
 import org.jetbrains.compose.compose
-import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -16,7 +15,7 @@ java {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("org.jetbrains.kotlin:kotlin-reflect:${getKotlinPluginVersion()}")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.31")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
     implementation("com.squareup:kotlinpoet:1.10.2")
     implementation("com.squareup.moshi:moshi:1.13.0")
