@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.unit.dp
 
 private const val SQUARE_SIZE_IN_DP = 8
@@ -18,11 +19,21 @@ private const val SQUARE_SIZE_IN_DP = 8
 @Suppress("FunctionName")
 fun Checkerboard(
     modifier: Modifier = Modifier,
-    squareColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.12F)
+    oddSquareColor: Color = Color.Unspecified,
+    evenSquareColor: Color = Color.Unspecified
 ) {
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         val maxWidth = constraints.maxWidth
         val maxHeight = constraints.maxHeight
+
+        val onSurfaceColor = MaterialTheme.colors.onSurface
+        val isInLightMode = MaterialTheme.colors.isLight
+        val oddSquareActualColor =
+            if (oddSquareColor.isSpecified) oddSquareColor
+            else onSurfaceColor.copy(alpha = if (isInLightMode) 0.38F else 0.54F)
+        val evenSquareActualColor =
+            if (evenSquareColor.isSpecified) evenSquareColor
+            else onSurfaceColor.copy(alpha = if (isInLightMode) 0.08F else 0.16F)
 
         Canvas(
             modifier = Modifier.size(
@@ -33,18 +44,22 @@ fun Checkerboard(
             val squareSizeInPixels = SQUARE_SIZE_IN_DP.dp.toPx()
             var x = 0F
             var y = 0F
+            var odd = true
 
             while (y < size.height) {
                 drawRect(
                     topLeft = Offset(x, y),
                     size = Size(squareSizeInPixels, squareSizeInPixels),
-                    color = squareColor,
+                    color = if (odd) oddSquareActualColor else evenSquareActualColor,
                 )
 
-                x = if (x < size.width - squareSizeInPixels * 2) x + squareSizeInPixels * 2
-                else (y + squareSizeInPixels) % (squareSizeInPixels * 2)
-
-                if (x <= squareSizeInPixels) y += squareSizeInPixels
+                if (x < size.width) {
+                    x += squareSizeInPixels
+                    odd = !odd
+                } else {
+                    x = (y + squareSizeInPixels) % (squareSizeInPixels)
+                    y += squareSizeInPixels
+                }
             }
         }
     }
