@@ -1,21 +1,17 @@
 import org.jetbrains.compose.compose
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.5.31"
-    id("org.jetbrains.compose") version "1.0.0-beta5"
+    kotlin("jvm") version "1.6.10"
+    id("org.jetbrains.compose") version "1.1.0"
     id("app.cash.licensee") version "1.2.0"
     // id("com.autonomousapps.dependency-analysis") version "0.79.0"
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.31")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
     implementation("com.squareup:kotlinpoet:1.10.2")
     implementation("com.squareup.moshi:moshi:1.13.0")
@@ -26,7 +22,16 @@ dependencies {
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.4.5")
 }
 
-compose.desktop.application.mainClass = "MainKt"
+compose.desktop {
+    application {
+        mainClass = "MainKt"
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "svg2iv-desktop"
+            packageVersion = "1.0.0"
+        }
+    }
+}
 
 licensee {
     allow("Apache-2.0")
@@ -42,10 +47,13 @@ tasks.test {
     useJUnitPlatform()
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
 tasks.withType<KotlinCompile>().all {
     kotlinOptions {
-        languageVersion = "1.5"
-        apiVersion = "1.5"
         jvmTarget = JavaVersion.VERSION_11.toString()
         freeCompilerArgs = freeCompilerArgs + "-Xopt-in=kotlin.RequiresOptIn"
     }
