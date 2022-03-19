@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -23,6 +24,7 @@ class ImageVectorNotPainter {
 
     private val drawScope = CanvasDrawScope()
     private val path = Path()
+    private val pathMeasure = PathMeasure()
     private val pathParser = PathParser()
 
     fun drawImageVectorInto(target: DrawScope, imageVector: ImageVector, size: IntSize) {
@@ -95,6 +97,23 @@ class ImageVectorNotPainter {
     private fun DrawScope.drawVectorPath(vectorPath: VectorPath) {
         with(vectorPath) {
             val path = pathData.toPath()
+            if (trimPathStart != DefaultTrimPathStart || trimPathEnd != DefaultTrimPathEnd) {
+                pathMeasure.setPath(path, forceClosed = false)
+                val length = pathMeasure.length
+                val start = ((trimPathStart + trimPathOffset) % 1F) * length
+                val end = ((trimPathEnd + trimPathOffset) % 1F) * length
+                val newPath = Path()
+                if (start > end) {
+                    pathMeasure.getSegment(start, length, newPath, startWithMoveTo = true)
+                    pathMeasure.getSegment(0F, end, newPath, startWithMoveTo = true)
+                } else {
+                    pathMeasure.getSegment(start, end, newPath, startWithMoveTo = true)
+                }
+                with(path) {
+                    reset()
+                    addPath(newPath)
+                }
+            }
             fill?.let { fill ->
                 drawPath(path, fill, fillAlpha)
             }
@@ -106,5 +125,8 @@ class ImageVectorNotPainter {
     }
 
     private fun List<PathNode>.toPath() =
-        pathParser.run { clear(); addPathNodes(this@toPath) }.toPath(path)
+        with(pathParser) {
+            clear()
+            addPathNodes(this@toPath)
+        }.toPath(path)
 }

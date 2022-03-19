@@ -55,7 +55,8 @@ java {
 tasks.withType<KotlinCompile>().all {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
-        freeCompilerArgs = freeCompilerArgs + "-Xopt-in=kotlin.RequiresOptIn"
+        @Suppress("SuspiciousCollectionReassignment")
+        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
     }
 }
 
