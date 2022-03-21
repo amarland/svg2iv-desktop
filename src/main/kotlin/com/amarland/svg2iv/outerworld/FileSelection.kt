@@ -5,7 +5,6 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
-import java.util.*
 import javax.swing.JFileChooser
 
 suspend fun openFileSelectionDialog(parent: Frame): List<String> {
@@ -13,15 +12,15 @@ suspend fun openFileSelectionDialog(parent: Frame): List<String> {
         IS_OS_WINDOWS -> {
             val files = readPowerShellScriptOutputLines(
                 """
-                Add-Type -AssemblyName System.Windows.Forms
+                Add-Type -AssemblyName System.Windows.Forms;
+                ${'$'}filter = "SVG files (*.svg)|*.svg|XML files (*.xml)|*.xml|All files (*.*)|*.*";
                 ${'$'}dialog = New-Object System.Windows.Forms.OpenFileDialog -Property @{
-                    Filter = 'SVG files (*.svg)|*.svg|XML files (*.xml)|*.xml|All files (*.*)|*.*'
-                    Multiselect = ${'$'}true
-                }
+                    Filter = ${'$'}filter;
+                    Multiselect = ${'$'}true;
+                };
                 if (${'$'}dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK) {
-                    Write-Output ${'$'}dialog.FileNames
-                }
-                """.trimIndent()
+                    Write-Output ${'$'}dialog.FileNames;
+                };""".trimIndent()
             )
 
             if (files != null) return files
@@ -74,11 +73,11 @@ suspend fun openDirectorySelectionDialog(parent: Frame): String? {
         IS_OS_WINDOWS ->
             readPowerShellScriptOutputLines(
                 """
-                Add-Type -AssemblyName System.Windows.Forms
-                ${'$'}dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+                Add-Type -AssemblyName System.Windows.Forms;
+                ${'$'}dialog = New-Object System.Windows.Forms.FolderBrowserDialog;
                 if (${'$'}dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK) {
-                    Write-Output ${'$'}dialog.SelectedPath
-                }""".trimIndent()
+                    Write- DocFinder.Output ${'$'}dialog.SelectedPath;
+                };""".trimIndent()
             )?.let { lines ->
                 if (lines.isEmpty()) return null
 
@@ -118,16 +117,16 @@ suspend fun openDirectorySelectionDialog(parent: Frame): String? {
 
 private suspend fun readPowerShellScriptOutputLines(script: String): List<String>? =
     withContext(Dispatchers.IO) {
-        val encodedScript = Base64.getEncoder()
-            .encode(script.toByteArray(Charsets.UTF_16LE /* System.Text.Encoding.Unicode */))
-            .decodeToString()
+        val command = script.replace('\n', ' ').replace(Regex(" {2,}"), " ")
+        @Suppress("BlockingMethodInNonBlockingContext")
         return@withContext Runtime.getRuntime()
-            .exec("powershell -ExecutionPolicy unrestricted -EncodedCommand $encodedScript")
+            .exec("powershell Invoke-Expression -Command '$command'")
             .readOutputLines()
     }
 
 private suspend fun readShellCommandOutputLines(command: String): List<String>? =
     withContext(Dispatchers.IO) {
+        @Suppress("BlockingMethodInNonBlockingContext")
         Runtime.getRuntime().exec(arrayOf("sh", "-c", command)).readOutputLines()
     }
 
