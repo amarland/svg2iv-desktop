@@ -15,19 +15,16 @@ import androidx.compose.ui.unit.dp
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import kotlinx.coroutines.runBlocking
-import okio.buffer
-import okio.sink
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.net.Socket
 
 class CliToolCommunicationTest {
 
     @DisplayName(
         "startCliToolProcess returns ImageVectors converted from what is received" +
-                " from the client socket and the error messages from the process"
+                " and the error messages from the process"
     )
     @Test
     fun startCliToolProcess() {
@@ -137,6 +134,8 @@ class CliToolCommunicationTest {
             null
         )
 
+        val imageVectorStream = sourceJson.byteInputStream()
+
         val errorMessageStream = errorMessages
             .joinToString(System.lineSeparator())
             .byteInputStream()
@@ -145,16 +144,11 @@ class CliToolCommunicationTest {
             callCliTool(
                 sourceFilePaths = listOf("/path/to/source/file"),
                 extensionReceiver = null,
-                startProcess = { _, _, address, port ->
-                    mock<Process> {
+                startProcess = { _, _ ->
+                    mock {
+                        on { inputStream } doReturn imageVectorStream
                         on { errorStream } doReturn errorMessageStream
                         on { waitFor() } doReturn 0
-                    }.also {
-                        Socket(address, port).use { client ->
-                            client.getOutputStream().sink().buffer()
-                                .writeUtf8(sourceJson)
-                                .flush()
-                        }
                     }
                 }
             )
