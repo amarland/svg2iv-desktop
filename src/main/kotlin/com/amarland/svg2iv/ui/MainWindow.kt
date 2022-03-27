@@ -242,8 +242,7 @@ private fun RightPanel(state: MainWindowState) {
     ) {
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize(0.65F)
-                .aspectRatio(1F),
-            contentAlignment = Alignment.Center
+                .aspectRatio(1F)
         ) {
             Checkerboard()
 
