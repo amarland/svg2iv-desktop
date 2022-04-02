@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.ui.CustomIcons
+import com.amarland.svg2iv.util.ShortcutKey
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -195,19 +196,20 @@ class MainWindowBloc {
     companion object {
 
         @JvmField
-        val SHORTCUT_BINDINGS = mapOf(
-            setOf(Key.AltLeft, Key.S) to { bloc: MainWindowBloc ->
-                bloc.addEvent(MainWindowEvent.SelectSourceFilesButtonClicked)
-            },
-            setOf(Key.AltLeft, Key.D) to { bloc: MainWindowBloc ->
-                bloc.addEvent(MainWindowEvent.SelectDestinationDirectoryButtonClicked)
-            },
-            setOf(Key.Escape) to { bloc: MainWindowBloc ->
-                if (bloc.state.value.areErrorMessagesShown) {
-                    bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
+        val SHORTCUT_BINDINGS = buildMap<ShortcutKey, (MainWindowBloc) -> Unit> {
+            this[ShortcutKey.newInstance(Key.S, isAltPressed = true)] =
+                { bloc -> bloc.addEvent(MainWindowEvent.SelectSourceFilesButtonClicked) }
+
+            this[ShortcutKey.newInstance(Key.D, isAltPressed = true)] =
+                { bloc -> bloc.addEvent(MainWindowEvent.SelectDestinationDirectoryButtonClicked) }
+
+            this[ShortcutKey.newInstance(Key.Escape)] =
+                { bloc ->
+                    if (bloc.state.value.areErrorMessagesShown) {
+                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
+                    }
                 }
-            }
-        )
+        }
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00
     }
