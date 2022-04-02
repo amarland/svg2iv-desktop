@@ -3,10 +3,9 @@ package com.amarland.svg2iv
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
@@ -15,6 +14,7 @@ import androidx.compose.ui.window.singleWindowApplication
 import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.ui.LocalComposeWindow
 import com.amarland.svg2iv.ui.MainWindowContent
+import com.amarland.svg2iv.util.ShortcutKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalComposeUiApi
@@ -37,11 +37,11 @@ fun main() = singleWindowApplication(
 @ExperimentalComposeUiApi
 private fun onPreviewKeyEvent(event: KeyEvent): Boolean {
     if (event.type == KeyEventType.KeyDown) {
-        val shortcut = mutableSetOf(event.key)
-        if (event.isAltPressed) {
-            shortcut.add(Key.AltLeft)
-        }
-        MainWindowBloc.SHORTCUT_BINDINGS[shortcut]
+        val key = ShortcutKey.newInstance(
+            event.key,
+            isAltPressed = event.awtEventOrNull?.isAltDown ?: false
+        )
+        MainWindowBloc.SHORTCUT_BINDINGS[key]
             ?.let { action ->
                 action(mainWindowBloc)
                 return true
