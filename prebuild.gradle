@@ -5,7 +5,7 @@ import java.nio.file.Path
 
 task buildExecutableIfNotExists(type: Exec) {
     final rootProject = project.rootProject
-    final executableFile = rootProject.file 'svg2iv.exe'
+    final executableFile = rootProject.file 'bin/svg2iv.exe'
     if (!executableFile.exists()) {
         final properties = new Properties()
         final propertiesFile = rootProject.file 'local.properties'
@@ -43,4 +43,4 @@ private void logError(String message) {
     logger.log LogLevel.ERROR, message
 }
 
-build.dependsOn buildExecutableIfNotExists
+// build.dependsOn buildExecutableIfNotExists

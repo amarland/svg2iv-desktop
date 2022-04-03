@@ -3,8 +3,6 @@ package com.amarland.svg2iv.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -47,6 +45,8 @@ val LocalComposeWindow = compositionLocalOf<ComposeWindow> {
 private val ANDROID_GREEN = Color(0xFF00DE7A)
 private val ANDROID_BLUE = Color(0xFF2196F3)
 
+private const val MAX_ERROR_MESSAGE_COUNT = 8
+
 private val JETBRAINS_MONO: FontFamily =
     FontFamily(Font(resource = "font/jetbrains_mono_regular.ttf"))
 
@@ -61,78 +61,97 @@ private val WORK_SANS: FontFamily =
 fun MainWindowContent(bloc: MainWindowBloc) {
     val state = bloc.state.collectAsState().value
 
-    CircularReveal(targetState = state.isThemeDark) { isThemeDark ->
-        MaterialTheme(
-            colors = if (isThemeDark) {
-                darkColors(primary = ANDROID_GREEN, secondary = ANDROID_BLUE)
-            } else {
-                lightColors(primary = ANDROID_BLUE, secondary = ANDROID_GREEN)
-            },
-            typography = Typography(defaultFontFamily = WORK_SANS)
-        ) {
-            Box {
-                Column {
-                    TopAppBar(
-                        title = { Text("SVG to ImageVector conversion tool") },
-                        actions = {
-                            IconButton(
-                                onClick = {
-                                    bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked)
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = CustomIcons.ToggleTheme,
-                                    contentDescription = null
-                                )
-                            }
-                            IconButton(
-                                onClick = { /* TODO */ }
-                            ) { Icon(imageVector = Icons.Outlined.Info, contentDescription = null) }
-                        }
-                    )
+    CompositionLocalProvider(LocalBloc provides bloc) {
+        CircularReveal(targetState = state.isThemeDark) { isThemeDark ->
+            MaterialTheme(
+                colors = if (isThemeDark) {
+                    darkColors(primary = ANDROID_GREEN, secondary = ANDROID_BLUE)
+                } else {
+                    lightColors(primary = ANDROID_BLUE, secondary = ANDROID_GREEN)
+                },
+                typography = Typography(defaultFontFamily = WORK_SANS)
+            ) {
+                Box {
+                    Column {
+                        AppBar()
 
-                    Row(modifier = Modifier.background(color = MaterialTheme.colors.background)) {
-                        CompositionLocalProvider(LocalBloc provides bloc) {
+                        Row(
+                            modifier = Modifier.background(color = MaterialTheme.colors.background)
+                        ) {
                             LeftPanel(state)
                             RightPanel(state)
                         }
                     }
-                }
 
-                if (state.areErrorMessagesShown) {
-                    Box(
-                        modifier = Modifier.fillMaxSize()
-                            .background(
-                                color = MaterialTheme.colors.onBackground
-                                    .copy(alpha = ContentAlpha.disabled)
-                            )
-                    )
-
-                    Surface(
-                        modifier = Modifier.widthIn(max = 600.dp)
-                            .padding(16.dp)
-                            .align(alignment = Alignment.Center),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            LazyColumn {
-                                items(state.errorMessages) { line ->
-                                    Text(line, fontFamily = JETBRAINS_MONO)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = {
-                                    bloc.addEvent(
-                                        MainWindowEvent.ErrorMessagesDialogCloseButtonClicked
-                                    )
-                                },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
-                                Text("Close")
-                            }
-                        }
+                    if (state.areErrorMessagesShown) {
+                        ErrorMessagesDialog(state)
                     }
+                }
+            }
+        }
+    }
+}
+
+@ExperimentalComposeUiApi
+@Suppress("FunctionName")
+@Composable
+private fun AppBar() {
+    val bloc = LocalBloc.current
+    TopAppBar(
+        title = { Text("SVG to ImageVector conversion tool") },
+        actions = {
+            IconButton(onClick = { bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked) }) {
+                Icon(
+                    imageVector = CustomIcons.ToggleTheme,
+                    contentDescription = null
+                )
+            }
+            IconButton(onClick = { /* TODO */ }) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null
+                )
+            }
+        }
+    )
+}
+
+@ExperimentalComposeUiApi
+@Suppress("FunctionName")
+@Composable
+private fun ErrorMessagesDialog(state: MainWindowState) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(
+                color = MaterialTheme.colors.onBackground
+                    .copy(alpha = ContentAlpha.disabled)
+            )
+    ) {
+        Surface(
+            modifier = Modifier.widthIn(min = 400.dp, max = 700.dp)
+                .padding(16.dp)
+                .align(alignment = Alignment.Center),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                Column(modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 8.dp)) {
+                    for (message in state.errorMessages.take(MAX_ERROR_MESSAGE_COUNT)) {
+                        Text(message, fontFamily = JETBRAINS_MONO)
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                val bloc = LocalBloc.current
+                Row(modifier = Modifier.align(Alignment.End)) {
+                    if (state.errorMessages.size > MAX_ERROR_MESSAGE_COUNT) {
+                        TextButton(
+                            onClick = { /* TODO */ }
+                        ) { Text("Read more") }
+                    }
+                    TextButton(
+                        onClick = {
+                            bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
+                        }
+                    ) { Text("Close") }
                 }
             }
         }

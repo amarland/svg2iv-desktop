@@ -2,6 +2,7 @@ package com.amarland.svg2iv
 
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.input.key.KeyEvent
@@ -9,6 +10,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.singleWindowApplication
 import com.amarland.svg2iv.state.MainWindowBloc
@@ -26,7 +28,11 @@ private val mainWindowBloc = MainWindowBloc()
 fun main() = singleWindowApplication(
     title = "svg2iv",
     resizable = false,
-    state = WindowState(width = 800.dp, height = 350.dp),
+    state = WindowState(
+        position = WindowPosition.Aligned(Alignment.Center),
+        width = 800.dp,
+        height = 350.dp
+    ),
     onPreviewKeyEvent = ::onPreviewKeyEvent
 ) {
     CompositionLocalProvider(LocalComposeWindow provides window) {
@@ -35,7 +41,7 @@ fun main() = singleWindowApplication(
 }
 
 @ExperimentalComposeUiApi
-private fun onPreviewKeyEvent(event: KeyEvent): Boolean {
+fun onPreviewKeyEvent(event: KeyEvent): Boolean {
     if (event.type == KeyEventType.KeyDown) {
         val key = ShortcutKey.newInstance(
             event.key,
