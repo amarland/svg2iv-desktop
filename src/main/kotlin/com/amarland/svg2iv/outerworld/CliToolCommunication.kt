@@ -5,7 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.buffer
 import okio.source
-import java.io.File
 import java.io.IOException
 
 @Suppress("BlockingMethodInNonBlockingContext")
@@ -27,9 +26,12 @@ suspend fun callCliTool(
     return withContext(Dispatchers.IO) {
         val process = startProcess(sourceFilePaths, extensionReceiver)
 
-        val imageVectors = ImageVectorArrayJsonAdapter()
-            .fromJson(process.inputStream.source().buffer())
-            ?: emptyList<ImageVector>()
+        val imageVectors = process.inputStream.source().buffer()
+            .use { bufferedSource ->
+                bufferedSource.takeUnless { source -> source.exhausted() }
+                    ?.let { source -> ImageVectorArrayJsonAdapter().fromJson(source) }
+                    ?: emptyList()
+            }
         val errorMessages = process.errorStream
             .bufferedReader()
             .readLines() // uses `use` internally
@@ -48,17 +50,15 @@ private fun startCliToolProcess(
     sourceFilePaths: List<String>,
     extensionReceiver: String?
 ): Process {
-    val shellInvocation = if (IS_OS_WINDOWS) "cmd.exe" else "sh"
-    val commandOption = if (IS_OS_WINDOWS) "/c" else "-c"
-    val executableName = "svg2iv.exe"
-    val executablePath =
-        if (File(executableName).exists()) ".${File.separator}$executableName" else executableName
+    val shellInvocation = if (IS_OS_WINDOWS) "powershell.exe" else "sh"
+    val commandOption = if (IS_OS_WINDOWS) "-Command" else "-c"
+    val executablePath = "./bin/svg2iv.exe"
     val command = buildString {
         append(executablePath)
         if (!extensionReceiver.isNullOrEmpty()) {
             append(" -r $extensionReceiver")
         }
-        append(" --stdout ")
+        append(" --json ")
         append('"')
         append(sourceFilePaths.joinToString(","))
         append('"')

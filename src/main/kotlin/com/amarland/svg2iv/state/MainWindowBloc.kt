@@ -162,7 +162,7 @@ class MainWindowBloc {
             }
         }
 
-        MainWindowEvent.ErrorMessagesDialogCloseButtonClicked ->
+        MainWindowEvent.ErrorMessagesDialogCloseRequested ->
             currentState.copy(areErrorMessagesShown = false)
 
         else -> currentState
@@ -206,7 +206,7 @@ class MainWindowBloc {
             this[ShortcutKey.newInstance(Key.Escape)] =
                 { bloc ->
                     if (bloc.state.value.areErrorMessagesShown) {
-                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseButtonClicked)
+                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
                     }
                 }
         }
