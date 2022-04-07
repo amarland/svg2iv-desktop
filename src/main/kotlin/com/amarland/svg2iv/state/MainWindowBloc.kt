@@ -165,6 +165,11 @@ class MainWindowBloc {
         MainWindowEvent.ErrorMessagesDialogCloseRequested ->
             currentState.copy(areErrorMessagesShown = false)
 
+        MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
+            // TODO
+            currentState.copy(areErrorMessagesShown = false)
+        }
+
         else -> currentState
     }
 

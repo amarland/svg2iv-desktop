@@ -123,34 +123,38 @@ private fun ErrorMessagesDialog(state: MainWindowState) {
     Box(
         modifier = Modifier.fillMaxSize()
             .background(
-                color = MaterialTheme.colors.onBackground
-                    .copy(alpha = ContentAlpha.disabled)
+                // barrier/scrim
+                color = Color.Black.copy(alpha = 0.74F)
             )
     ) {
         Surface(
-            modifier = Modifier.widthIn(min = 400.dp, max = 700.dp)
+            modifier = Modifier.widthIn(min = 320.dp, max = 680.dp)
                 .padding(16.dp)
                 .align(alignment = Alignment.Center),
             shape = MaterialTheme.shapes.medium
         ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                Column(modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 8.dp)) {
-                    for (message in state.errorMessages.take(MAX_ERROR_MESSAGE_COUNT)) {
-                        Text(message, fontFamily = JETBRAINS_MONO)
-                    }
+            Column(modifier = Modifier.padding(top = 24.dp)) {
+                for (message in state.errorMessages.take(MAX_ERROR_MESSAGE_COUNT)) {
+                    Text(
+                        message,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        fontFamily = JETBRAINS_MONO,
+                    )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 val bloc = LocalBloc.current
                 Row(modifier = Modifier.align(Alignment.End)) {
                     if (state.errorMessages.size > MAX_ERROR_MESSAGE_COUNT) {
                         TextButton(
-                            onClick = { /* TODO */ }
+                            onClick = { /* TODO */ },
+                            modifier = Modifier.padding(horizontal = 8.dp),
                         ) { Text("Read more") }
                     }
                     TextButton(
                         onClick = {
                             bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
-                        }
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp),
                     ) { Text("Close") }
                 }
             }

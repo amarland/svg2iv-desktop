@@ -25,4 +25,6 @@ sealed class MainWindowEvent {
     data class SnackbarActionButtonClicked(val snackbarId: Int) : MainWindowEvent()
 
     object ErrorMessagesDialogCloseRequested : MainWindowEvent()
+
+    object ReadMoreErrorMessagesActionClicked : MainWindowEvent()
 }
