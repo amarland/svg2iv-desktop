@@ -1,7 +1,6 @@
 package com.amarland.svg2iv.state
 
-import net.harawata.appdirs.AppDirsFactory
-import java.io.File
+import com.amarland.svg2iv.outerworld.APP_DATA_DIRECTORY_PATH_STRING
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -41,17 +40,14 @@ private class PropertiesDelegate<T>(
     private companion object {
 
         // aligned with Flutter implementation (`shared_preferences` package)
-        private val DIRECTORY_PATH_STRING = AppDirsFactory.getInstance()
-            .getUserDataDir("svg2iv-desktop", null, "com.amarland", true)
-
-        private val FILE_PATH = Path.of("$DIRECTORY_PATH_STRING${File.separator}svg2iv.properties")
+        private val FILE_PATH = Path.of(APP_DATA_DIRECTORY_PATH_STRING, "svg2iv.properties")
 
         @JvmStatic
         private val properties by lazy(LazyThreadSafetyMode.NONE) {
             Properties().apply {
                 try {
                     if (!Files.exists(FILE_PATH)) {
-                        Files.createDirectories(Path.of(DIRECTORY_PATH_STRING))
+                        Files.createDirectories(Path.of(APP_DATA_DIRECTORY_PATH_STRING))
                         Files.createFile(FILE_PATH)
                     }
                     Files.newInputStream(FILE_PATH).use(::load)
