@@ -20,25 +20,21 @@ suspend fun callCliTool(
         extensionReceiver: String?
     ) -> Process = ::startCliToolProcess,
     extensionReceiver: String? = null
-): Pair<List<ImageVector?>, List<String>> {
+): List<ImageVector?> {
     require(sourceFilePaths.isNotEmpty())
 
     return withContext(Dispatchers.IO) {
         val process = startProcess(sourceFilePaths, extensionReceiver)
-
         val imageVectors = process.inputStream.source().buffer()
             .use { bufferedSource ->
                 bufferedSource.takeUnless { source -> source.exhausted() }
                     ?.let { source -> ImageVectorArrayJsonAdapter().fromJson(source) }
                     ?: emptyList()
             }
-        val errorMessages = process.errorStream
-            .bufferedReader()
-            .readLines() // uses `use` internally
-
+        process.errorStream.bufferedReader().use(::writeErrorMessages)
         process.waitFor()
 
-        return@withContext imageVectors to errorMessages
+        return@withContext imageVectors
     }
 }
 

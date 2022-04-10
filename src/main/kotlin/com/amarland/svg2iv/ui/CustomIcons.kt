@@ -99,7 +99,7 @@ object CustomIcons {
                 arcTo(10F, 10F, 0F, false, false, 12F, 2F)
                 moveTo(12F, 20F)
                 arcTo(8F, 8F, 0F, false, true, 4F, 12F)
-                arcTo(8F, 8F, 0F, false, true, 12F, 20F)
+                arcTo(8F, 8F, 0F, true, true, 12F, 20F)
                 close()
             }
         }

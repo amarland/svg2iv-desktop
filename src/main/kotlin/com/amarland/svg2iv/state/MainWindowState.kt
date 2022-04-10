@@ -13,9 +13,8 @@ data class MainWindowState(
     val areFileSystemEntitySelectionButtonsEnabled: Boolean,
     val extensionReceiverTextFieldState: TextFieldState,
     val isAllInOneCheckboxChecked: Boolean,
-    val imageVector: ImageVector,
-    val errorMessages: List<String>,
-    val areErrorMessagesShown: Boolean,
+    val imageVector: ImageVector?,
+    val errorMessagesDialogState: ErrorMessagesDialogState,
     val isPreviousPreviewButtonEnabled: Boolean,
     val isNextPreviewButtonEnabled: Boolean
 ) {
@@ -32,8 +31,7 @@ data class MainWindowState(
                 extensionReceiverTextFieldState = TextFieldState.DEFAULT,
                 isAllInOneCheckboxChecked = false,
                 imageVector = Icons.Outlined.Face,
-                errorMessages = emptyList(),
-                areErrorMessagesShown = false,
+                errorMessagesDialogState = ErrorMessagesDialogState.NotShown,
                 isPreviousPreviewButtonEnabled = false,
                 isNextPreviewButtonEnabled = false
             )
@@ -52,4 +50,16 @@ data class TextFieldState(
         @JvmField
         val DEFAULT = TextFieldState(value = "")
     }
+}
+
+@Immutable
+sealed interface ErrorMessagesDialogState {
+
+    object NotShown : ErrorMessagesDialogState
+
+    @Immutable
+    data class Shown(
+        val messages: List<String>,
+        val isReadMoreButtonVisible: Boolean
+    ) : ErrorMessagesDialogState
 }
