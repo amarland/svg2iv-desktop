@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
 import com.amarland.svg2iv.outerworld.openDirectorySelectionDialog
 import com.amarland.svg2iv.outerworld.openFileSelectionDialog
+import com.amarland.svg2iv.state.ErrorMessagesDialogState
 import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
@@ -44,8 +45,6 @@ val LocalComposeWindow = compositionLocalOf<ComposeWindow> {
 
 private val ANDROID_GREEN = Color(0xFF00DE7A)
 private val ANDROID_BLUE = Color(0xFF2196F3)
-
-private const val MAX_ERROR_MESSAGE_COUNT = 8
 
 private val JETBRAINS_MONO: FontFamily =
     FontFamily(Font(resource = "font/jetbrains_mono_regular.ttf"))
@@ -83,8 +82,8 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         }
                     }
 
-                    if (state.areErrorMessagesShown) {
-                        ErrorMessagesDialog(state)
+                    if (state.errorMessagesDialogState is ErrorMessagesDialogState.Shown) {
+                        ErrorMessagesDialog(state.errorMessagesDialogState)
                     }
                 }
             }
@@ -119,7 +118,7 @@ private fun AppBar() {
 @ExperimentalComposeUiApi
 @Suppress("FunctionName")
 @Composable
-private fun ErrorMessagesDialog(state: MainWindowState) {
+private fun ErrorMessagesDialog(state: ErrorMessagesDialogState.Shown) {
     Box(
         modifier = Modifier.fillMaxSize()
             .background(
@@ -134,22 +133,28 @@ private fun ErrorMessagesDialog(state: MainWindowState) {
             shape = MaterialTheme.shapes.medium
         ) {
             Column(modifier = Modifier.padding(top = 24.dp)) {
-                for (message in state.errorMessages.take(MAX_ERROR_MESSAGE_COUNT)) {
+                for (message in state.messages) {
                     Text(
                         message,
                         modifier = Modifier.padding(horizontal = 24.dp),
                         fontFamily = JETBRAINS_MONO,
                     )
                 }
+
                 Spacer(modifier = Modifier.height(24.dp))
-                val bloc = LocalBloc.current
+
                 Row(modifier = Modifier.align(Alignment.End)) {
-                    if (state.errorMessages.size > MAX_ERROR_MESSAGE_COUNT) {
+                    val bloc = LocalBloc.current
+
+                    if (state.isReadMoreButtonVisible) {
                         TextButton(
-                            onClick = { /* TODO */ },
+                            onClick = {
+                                bloc.addEvent(MainWindowEvent.ReadMoreErrorMessagesActionClicked)
+                            },
                             modifier = Modifier.padding(horizontal = 8.dp),
                         ) { Text("Read more") }
                     }
+
                     TextButton(
                         onClick = {
                             bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
@@ -276,7 +281,7 @@ private fun RightPanel(state: MainWindowState) {
             Canvas(modifier = Modifier.size(size)) {
                 notPainter.drawImageVectorInto(
                     this,
-                    state.imageVector,
+                    state.imageVector ?: CustomIcons.ErrorCircle,
                     IntSize(size.width.toPx().toInt(), size.height.toPx().toInt())
                 )
             }

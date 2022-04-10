@@ -5,7 +5,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import com.amarland.svg2iv.outerworld.callCliTool
-import com.amarland.svg2iv.ui.CustomIcons
+import com.amarland.svg2iv.outerworld.openLogFileInPreferredApplication
+import com.amarland.svg2iv.outerworld.readErrorMessages
 import com.amarland.svg2iv.util.ShortcutKey
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
@@ -21,7 +22,7 @@ import java.io.File
 @ExperimentalComposeUiApi
 class MainWindowBloc {
 
-    private val imageVectors = mutableListOf<ImageVector>()
+    private val imageVectors = mutableListOf<ImageVector?>()
     private var previewIndex = 0
 
     private val coroutineScope = MainScope()
@@ -50,6 +51,9 @@ class MainWindowBloc {
         coroutineScope.launch { eventSink.send(event) }
     }
 
+    private val didErrorsOccur: Boolean
+        get() = imageVectors.any { imageVector -> imageVector == null }
+
     private fun mapEventToEffect(
         event: MainWindowEvent,
         currentState: MainWindowState
@@ -66,7 +70,7 @@ class MainWindowBloc {
                 }
 
             is MainWindowEvent.SourceFilesParsed -> {
-                if (event.errorMessages.isNotEmpty()) {
+                if (didErrorsOccur) {
                     val message =
                         "Error(s) occurred while trying to display a preview of the source(s)"
                     MainWindowEffect.ShowSnackbar(
@@ -111,11 +115,10 @@ class MainWindowBloc {
                 else currentState.imageVector
             currentState.copy(
                 sourceFilesSelectionTextFieldState = currentState.sourceFilesSelectionTextFieldState
-                    .copy(isError = event.errorMessages.isNotEmpty()),
+                    .copy(isError = didErrorsOccur),
                 extensionReceiverTextFieldState = currentState.extensionReceiverTextFieldState
                     .copy(placeholder = imageVectors.firstOrNull()?.name),
                 imageVector = imageVector,
-                errorMessages = event.errorMessages,
                 isPreviousPreviewButtonEnabled = false,
                 isNextPreviewButtonEnabled = imageVectors.size > 1
             )
@@ -155,19 +158,28 @@ class MainWindowBloc {
 
         is MainWindowEvent.SnackbarActionButtonClicked -> {
             when (val snackbarId = event.snackbarId) {
-                SNACKBAR_ID_PREVIEW_ERRORS ->
-                    currentState.copy(areErrorMessagesShown = true)
+                SNACKBAR_ID_PREVIEW_ERRORS -> {
+                    val (errorMessages, hasMoreThanLimit) =
+                        readErrorMessages(MAX_ERROR_MESSAGE_COUNT)
+                    currentState.copy(
+                        errorMessagesDialogState =
+                        ErrorMessagesDialogState.Shown(
+                            errorMessages,
+                            isReadMoreButtonVisible = hasMoreThanLimit
+                        )
+                    )
+                }
 
                 else -> throw IllegalArgumentException("Unrecognized snackbar ID: $snackbarId")
             }
         }
 
         MainWindowEvent.ErrorMessagesDialogCloseRequested ->
-            currentState.copy(areErrorMessagesShown = false)
+            currentState.copy(errorMessagesDialogState = ErrorMessagesDialogState.NotShown)
 
         MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
-            // TODO
-            currentState.copy(areErrorMessagesShown = false)
+            openLogFileInPreferredApplication()
+            currentState.copy(errorMessagesDialogState = ErrorMessagesDialogState.NotShown)
         }
 
         else -> currentState
@@ -181,20 +193,12 @@ class MainWindowBloc {
 
         coroutineScope.launch {
             try {
-                callCliTool(paths).also { (imageVectors, errorMessages) ->
-                    for (imageVector in imageVectors) {
-                        this@MainWindowBloc.imageVectors
-                            .add(imageVector ?: CustomIcons.ErrorCircle)
-                    }
-                    addEvent(MainWindowEvent.SourceFilesParsed(errorMessages))
-                }
+                @Suppress("BlockingMethodInNonBlockingContext")
+                callCliTool(paths).also(imageVectors::addAll)
             } catch (e: Exception) {
-                addEvent(
-                    MainWindowEvent.SourceFilesParsed(
-                        e.stackTraceToString().lines()
-                    )
-                )
+                // ignored
             }
+            addEvent(MainWindowEvent.SourceFilesParsed)
         }
     }
 
@@ -210,11 +214,14 @@ class MainWindowBloc {
 
             this[ShortcutKey.newInstance(Key.Escape)] =
                 { bloc ->
-                    if (bloc.state.value.areErrorMessagesShown) {
+                    val state = bloc.state.value
+                    if (state.errorMessagesDialogState is ErrorMessagesDialogState.Shown) {
                         bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
                     }
                 }
         }
+
+        private const val MAX_ERROR_MESSAGE_COUNT = 8
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00
     }
