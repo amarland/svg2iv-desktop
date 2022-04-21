@@ -1,3 +1,4 @@
+import com.github.jk1.license.render.JsonReportRenderer
 import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -7,6 +8,7 @@ plugins {
     id("org.jetbrains.compose") version "1.1.0"
     id("app.cash.licensee") version "1.2.0"
     // id("com.autonomousapps.dependency-analysis") version "0.79.0"
+    id("com.github.jk1.dependency-license-report") version "2.0"
 }
 
 dependencies {
@@ -41,6 +43,10 @@ licensee {
     ignoreDependencies("org.jetbrains.compose.material")
     ignoreDependencies("org.jetbrains.compose.runtime")
     ignoreDependencies("org.jetbrains.compose.ui")
+}
+
+licenseReport {
+    renderers = arrayOf(JsonReportRenderer())
 }
 
 tasks.test {
