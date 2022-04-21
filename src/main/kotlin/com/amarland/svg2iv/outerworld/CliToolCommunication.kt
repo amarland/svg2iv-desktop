@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import okio.buffer
 import okio.source
 import java.io.IOException
+import java.io.Reader
 
 @Suppress("BlockingMethodInNonBlockingContext")
 @Throws(
@@ -15,11 +16,12 @@ import java.io.IOException
 )
 suspend fun callCliTool(
     sourceFilePaths: List<String>,
+    extensionReceiver: String? = null,
     startProcess: (
         sourceFilePaths: List<String>,
         extensionReceiver: String?
     ) -> Process = ::startCliToolProcess,
-    extensionReceiver: String? = null
+    doWithErrorMessages: (messageReader: Reader) -> Unit = ::writeErrorMessages
 ): List<ImageVector?> {
     require(sourceFilePaths.isNotEmpty())
 
@@ -31,7 +33,7 @@ suspend fun callCliTool(
                     ?.let { source -> ImageVectorArrayJsonAdapter().fromJson(source) }
                     ?: emptyList()
             }
-        process.errorStream.bufferedReader().use(::writeErrorMessages)
+        process.errorStream.bufferedReader().use(doWithErrorMessages)
         process.waitFor()
 
         return@withContext imageVectors

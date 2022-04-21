@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 private const val SQUARE_SIZE_IN_DP = 8
 
 @Composable
-@Suppress("FunctionName")
 fun Checkerboard(
     modifier: Modifier = Modifier,
     oddSquareColor: Color = Color.Unspecified,

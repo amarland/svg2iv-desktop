@@ -4,10 +4,13 @@ import androidx.compose.material.SnackbarDuration
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.res.useResource
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.outerworld.openLogFileInPreferredApplication
 import com.amarland.svg2iv.outerworld.readErrorMessages
+import com.amarland.svg2iv.util.LicenseReportJsonAdapter
 import com.amarland.svg2iv.util.ShortcutKey
+import com.squareup.moshi.Moshi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -17,6 +20,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import okio.buffer
+import okio.source
 import java.io.File
 
 @ExperimentalComposeUiApi
@@ -94,6 +99,17 @@ class MainWindowBloc {
                 isDarkModeEnabled = newState.isThemeDark
             }
 
+        MainWindowEvent.AboutButtonClicked ->
+            currentState.copy(
+                dialog = Dialog.About(
+                    useResource("license-report/license-report.json") {
+                        LicenseReportJsonAdapter(moshi)
+                            .fromJson(it.source().buffer())
+                            ?.dependencies ?: emptyList()
+                    }
+                )
+            )
+
         MainWindowEvent.SelectSourceFilesButtonClicked,
         MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
             currentState.copy(areFileSystemEntitySelectionButtonsEnabled = false)
@@ -162,8 +178,8 @@ class MainWindowBloc {
                     val (errorMessages, hasMoreThanLimit) =
                         readErrorMessages(MAX_ERROR_MESSAGE_COUNT)
                     currentState.copy(
-                        errorMessagesDialogState =
-                        ErrorMessagesDialogState.Shown(
+                        dialog =
+                        Dialog.ErrorMessages(
                             errorMessages,
                             isReadMoreButtonVisible = hasMoreThanLimit
                         )
@@ -175,11 +191,11 @@ class MainWindowBloc {
         }
 
         MainWindowEvent.ErrorMessagesDialogCloseRequested ->
-            currentState.copy(errorMessagesDialogState = ErrorMessagesDialogState.NotShown)
+            currentState.copy(dialog = Dialog.None)
 
         MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
             openLogFileInPreferredApplication()
-            currentState.copy(errorMessagesDialogState = ErrorMessagesDialogState.NotShown)
+            currentState.copy(dialog = Dialog.None)
         }
 
         else -> currentState
@@ -215,7 +231,7 @@ class MainWindowBloc {
             this[ShortcutKey.newInstance(Key.Escape)] =
                 { bloc ->
                     val state = bloc.state.value
-                    if (state.errorMessagesDialogState is ErrorMessagesDialogState.Shown) {
+                    if (state.dialog is Dialog.ErrorMessages) {
                         bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
                     }
                 }
@@ -224,5 +240,7 @@ class MainWindowBloc {
         private const val MAX_ERROR_MESSAGE_COUNT = 8
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00
+
+        private val moshi = Moshi.Builder().build()
     }
 }

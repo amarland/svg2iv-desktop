@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -33,7 +34,6 @@ import kotlin.math.hypot
 // Based on this gist (adapted for desktop): https://gist.github.com/bmonjoie/8506040b2ea534eac931378348622725
 
 @Composable
-@Suppress("FunctionName")
 fun <T> CircularReveal(
     targetState: T,
     modifier: Modifier = Modifier,
@@ -79,7 +79,7 @@ fun <T> CircularReveal(
         modifier = modifier.pointerInput(Unit) {
             forEachGesture {
                 awaitPointerEventScope {
-                    offset = awaitPointerEvent().mouseEvent
+                    offset = awaitPointerEvent().awtEventOrNull
                         ?.takeIf { it.button == MouseEvent.BUTTON1 }
                         ?.let { event -> Offset(event.x.toFloat(), event.y.toFloat())
                     }
@@ -117,8 +117,8 @@ private class CircularRevealShape(
             addOval(
                 Rect(
                     center = Offset(
-                        offset?.x ?: size.width / 2F,
-                        offset?.y ?: size.height / 2F
+                        offset?.x ?: (size.width / 2F),
+                        offset?.y ?: (size.height / 2F)
                     ),
                     radius = longestDistanceToACorner(size, offset) * progress
                 )

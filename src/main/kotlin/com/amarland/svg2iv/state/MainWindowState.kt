@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.amarland.svg2iv.util.Dependency
 
 @Immutable
 data class MainWindowState(
@@ -14,7 +15,7 @@ data class MainWindowState(
     val extensionReceiverTextFieldState: TextFieldState,
     val isAllInOneCheckboxChecked: Boolean,
     val imageVector: ImageVector?,
-    val errorMessagesDialogState: ErrorMessagesDialogState,
+    val dialog: Dialog,
     val isPreviousPreviewButtonEnabled: Boolean,
     val isNextPreviewButtonEnabled: Boolean
 ) {
@@ -31,7 +32,7 @@ data class MainWindowState(
                 extensionReceiverTextFieldState = TextFieldState.DEFAULT,
                 isAllInOneCheckboxChecked = false,
                 imageVector = Icons.Outlined.Face,
-                errorMessagesDialogState = ErrorMessagesDialogState.NotShown,
+                dialog = Dialog.None,
                 isPreviousPreviewButtonEnabled = false,
                 isNextPreviewButtonEnabled = false
             )
@@ -53,13 +54,16 @@ data class TextFieldState(
 }
 
 @Immutable
-sealed interface ErrorMessagesDialogState {
+sealed interface Dialog {
 
-    object NotShown : ErrorMessagesDialogState
+    object None : Dialog
 
     @Immutable
-    data class Shown(
+    data class About(val dependencies: List<Dependency>) : Dialog
+
+    @Immutable
+    data class ErrorMessages(
         val messages: List<String>,
         val isReadMoreButtonVisible: Boolean
-    ) : ErrorMessagesDialogState
+    ) : Dialog
 }

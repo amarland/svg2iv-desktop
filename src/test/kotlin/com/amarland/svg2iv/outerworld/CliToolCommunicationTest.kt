@@ -140,7 +140,8 @@ class CliToolCommunicationTest {
             .joinToString(System.lineSeparator())
             .byteInputStream()
 
-        val (actualImageVectors, actualErrorMessages) = runBlocking {
+        val actualErrorMessages = ArrayList<String>(errorMessages.size)
+        val actualImageVectors = runBlocking {
             callCliTool(
                 sourceFilePaths = listOf("/path/to/source/file"),
                 extensionReceiver = null,
@@ -150,6 +151,9 @@ class CliToolCommunicationTest {
                         on { errorStream } doReturn errorMessageStream
                         on { waitFor() } doReturn 0
                     }
+                },
+                doWithErrorMessages = { messageReader ->
+                    messageReader.useLines(actualErrorMessages::addAll)
                 }
             )
         }
