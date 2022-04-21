@@ -3,6 +3,8 @@ package com.amarland.svg2iv.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -23,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
 import com.amarland.svg2iv.outerworld.openDirectorySelectionDialog
 import com.amarland.svg2iv.outerworld.openFileSelectionDialog
-import com.amarland.svg2iv.state.ErrorMessagesDialogState
+import com.amarland.svg2iv.state.Dialog
 import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
@@ -55,7 +57,6 @@ private val WORK_SANS: FontFamily =
 @ExperimentalComposeUiApi
 @ExperimentalCoroutinesApi
 @ExperimentalMaterialApi
-@Suppress("FunctionName")
 @Composable
 fun MainWindowContent(bloc: MainWindowBloc) {
     val state = bloc.state.collectAsState().value
@@ -82,8 +83,10 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         }
                     }
 
-                    if (state.errorMessagesDialogState is ErrorMessagesDialogState.Shown) {
-                        ErrorMessagesDialog(state.errorMessagesDialogState)
+                    when (val dialog = state.dialog) {
+                        is Dialog.About -> AboutDialog(dialog)
+                        is Dialog.ErrorMessages -> ErrorMessagesDialog(dialog)
+                        Dialog.None -> {}
                     }
                 }
             }
@@ -92,7 +95,6 @@ fun MainWindowContent(bloc: MainWindowBloc) {
 }
 
 @ExperimentalComposeUiApi
-@Suppress("FunctionName")
 @Composable
 private fun AppBar() {
     val bloc = LocalBloc.current
@@ -105,7 +107,7 @@ private fun AppBar() {
                     contentDescription = null
                 )
             }
-            IconButton(onClick = { /* TODO */ }) {
+            IconButton(onClick = { bloc.addEvent(MainWindowEvent.AboutButtonClicked) }) {
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = null
@@ -115,10 +117,8 @@ private fun AppBar() {
     )
 }
 
-@ExperimentalComposeUiApi
-@Suppress("FunctionName")
 @Composable
-private fun ErrorMessagesDialog(state: ErrorMessagesDialogState.Shown) {
+private fun Dialog(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize()
             .background(
@@ -130,38 +130,64 @@ private fun ErrorMessagesDialog(state: ErrorMessagesDialogState.Shown) {
             modifier = Modifier.widthIn(min = 320.dp, max = 680.dp)
                 .padding(16.dp)
                 .align(alignment = Alignment.Center),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(modifier = Modifier.padding(top = 24.dp)) {
-                for (message in state.messages) {
-                    Text(
-                        message,
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                        fontFamily = JETBRAINS_MONO,
-                    )
-                }
+            shape = MaterialTheme.shapes.medium,
+            content = content
+        )
+    }
+}
 
-                Spacer(modifier = Modifier.height(24.dp))
+@ExperimentalMaterialApi
+@Composable
+private fun AboutDialog(dialog: Dialog.About) {
+    Dialog {
+        LazyColumn {
+            items(dialog.dependencies) { dependency ->
+                val licenseCount = dependency.moduleLicenses?.size ?: 0
+                ListItem(
+                    overlineText = {
+                        Text("$licenseCount ${if (licenseCount == 1) "license" else "licenses"}")
+                    },
+                    text = { Text(dependency.moduleName) },
+                    secondaryText = { Text(dependency.moduleVersion) }
+                )
+            }
+        }
+    }
+}
 
-                Row(modifier = Modifier.align(Alignment.End)) {
-                    val bloc = LocalBloc.current
+@ExperimentalComposeUiApi
+@Composable
+private fun ErrorMessagesDialog(dialog: Dialog.ErrorMessages) {
+    Dialog {
+        Column(modifier = Modifier.padding(top = 24.dp)) {
+            for (message in dialog.messages) {
+                Text(
+                    message,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    fontFamily = JETBRAINS_MONO,
+                )
+            }
 
-                    if (state.isReadMoreButtonVisible) {
-                        TextButton(
-                            onClick = {
-                                bloc.addEvent(MainWindowEvent.ReadMoreErrorMessagesActionClicked)
-                            },
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                        ) { Text("Read more") }
-                    }
+            Spacer(modifier = Modifier.height(24.dp))
 
+            Row(modifier = Modifier.align(Alignment.End)) {
+                val bloc = LocalBloc.current
+
+                if (dialog.isReadMoreButtonVisible) {
                     TextButton(
                         onClick = {
-                            bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
+                            bloc.addEvent(MainWindowEvent.ReadMoreErrorMessagesActionClicked)
                         },
                         modifier = Modifier.padding(horizontal = 8.dp),
-                    ) { Text("Close") }
+                    ) { Text("Read more") }
                 }
+
+                TextButton(
+                    onClick = {
+                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
+                    },
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                ) { Text("Close") }
             }
         }
     }
@@ -169,7 +195,6 @@ private fun ErrorMessagesDialog(state: ErrorMessagesDialogState.Shown) {
 
 @ExperimentalComposeUiApi
 @ExperimentalMaterialApi
-@Suppress("FunctionName")
 @Composable
 private fun LeftPanel(state: MainWindowState) {
     val bloc = LocalBloc.current
@@ -258,7 +283,6 @@ private fun LeftPanel(state: MainWindowState) {
 }
 
 @ExperimentalComposeUiApi
-@Suppress("FunctionName")
 @Composable
 private fun RightPanel(state: MainWindowState) {
     val bloc = LocalBloc.current

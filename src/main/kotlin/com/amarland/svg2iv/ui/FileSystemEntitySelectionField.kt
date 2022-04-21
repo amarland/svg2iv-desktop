@@ -21,7 +21,6 @@ import com.amarland.svg2iv.util.asMnemonic
 
 @ExperimentalComposeUiApi
 @Composable
-@Suppress("FunctionName")
 fun FileSystemEntitySelectionField(
     onButtonClicked: () -> Unit,
     modifier: Modifier = Modifier,

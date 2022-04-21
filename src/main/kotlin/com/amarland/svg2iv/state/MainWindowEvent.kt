@@ -4,6 +4,8 @@ sealed class MainWindowEvent {
 
     object ToggleThemeButtonClicked : MainWindowEvent()
 
+    object AboutButtonClicked : MainWindowEvent()
+
     object SelectSourceFilesButtonClicked : MainWindowEvent()
 
     data class SourceFilesSelectionDialogClosed(val paths: List<String>) : MainWindowEvent()
