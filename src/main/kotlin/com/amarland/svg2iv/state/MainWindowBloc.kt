@@ -8,9 +8,10 @@ import androidx.compose.ui.res.useResource
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.outerworld.openLogFileInPreferredApplication
 import com.amarland.svg2iv.outerworld.readErrorMessages
-import com.amarland.svg2iv.util.LicenseReportJsonAdapter
+import com.amarland.svg2iv.util.LicenseReport
 import com.amarland.svg2iv.util.ShortcutKey
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.adapter
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -24,7 +25,6 @@ import okio.buffer
 import okio.source
 import java.io.File
 
-@ExperimentalComposeUiApi
 class MainWindowBloc {
 
     private val imageVectors = mutableListOf<ImageVector?>()
@@ -100,15 +100,7 @@ class MainWindowBloc {
             }
 
         MainWindowEvent.AboutButtonClicked ->
-            currentState.copy(
-                dialog = Dialog.About(
-                    useResource("license-report/license-report.json") {
-                        LicenseReportJsonAdapter(moshi)
-                            .fromJson(it.source().buffer())
-                            ?.dependencies ?: emptyList()
-                    }
-                )
-            )
+            currentState.copy(dialog = Dialog.About(listDependencies()))
 
         MainWindowEvent.SelectSourceFilesButtonClicked,
         MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
@@ -201,6 +193,13 @@ class MainWindowBloc {
         else -> currentState
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun listDependencies() = useResource("license-report/license-report.json") {
+        moshi.adapter<LicenseReport>()
+            .fromJson(it.source().buffer())
+            ?.dependencies ?: emptyList()
+    }
+
     private fun parseSourceFiles(paths: List<String>) {
         if (paths.isEmpty()) return
 
@@ -220,6 +219,7 @@ class MainWindowBloc {
 
     companion object {
 
+        @OptIn(ExperimentalComposeUiApi::class)
         @JvmField
         val SHORTCUT_BINDINGS = buildMap<ShortcutKey, (MainWindowBloc) -> Unit> {
             this[ShortcutKey.newInstance(Key.S, isAltPressed = true)] =

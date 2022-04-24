@@ -12,7 +12,6 @@ import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.Color
@@ -30,12 +29,10 @@ import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
 import com.amarland.svg2iv.state.MainWindowState
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
-@ExperimentalComposeUiApi
 private val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
 }
@@ -54,9 +51,6 @@ private val JETBRAINS_MONO: FontFamily =
 private val WORK_SANS: FontFamily =
     FontFamily(Font(resource = "font/work_sans_variable.ttf"))
 
-@ExperimentalComposeUiApi
-@ExperimentalCoroutinesApi
-@ExperimentalMaterialApi
 @Composable
 fun MainWindowContent(bloc: MainWindowBloc) {
     val state = bloc.state.collectAsState().value
@@ -94,7 +88,6 @@ fun MainWindowContent(bloc: MainWindowBloc) {
     }
 }
 
-@ExperimentalComposeUiApi
 @Composable
 private fun AppBar() {
     val bloc = LocalBloc.current
@@ -136,7 +129,7 @@ private fun Dialog(content: @Composable () -> Unit) {
     }
 }
 
-@ExperimentalMaterialApi
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun AboutDialog(dialog: Dialog.About) {
     Dialog {
@@ -155,7 +148,6 @@ private fun AboutDialog(dialog: Dialog.About) {
     }
 }
 
-@ExperimentalComposeUiApi
 @Composable
 private fun ErrorMessagesDialog(dialog: Dialog.ErrorMessages) {
     Dialog {
@@ -193,8 +185,7 @@ private fun ErrorMessagesDialog(dialog: Dialog.ErrorMessages) {
     }
 }
 
-@ExperimentalComposeUiApi
-@ExperimentalMaterialApi
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun LeftPanel(state: MainWindowState) {
     val bloc = LocalBloc.current
@@ -282,7 +273,6 @@ private fun LeftPanel(state: MainWindowState) {
     }
 }
 
-@ExperimentalComposeUiApi
 @Composable
 private fun RightPanel(state: MainWindowState) {
     val bloc = LocalBloc.current
@@ -352,7 +342,6 @@ private fun RightPanel(state: MainWindowState) {
     }
 }
 
-@ExperimentalComposeUiApi
 private suspend fun launchEffect(
     effect: MainWindowEffect,
     bloc: MainWindowBloc,
