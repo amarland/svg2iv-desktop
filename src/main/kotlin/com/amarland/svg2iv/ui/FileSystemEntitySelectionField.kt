@@ -9,7 +9,6 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
@@ -19,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
 import com.amarland.svg2iv.util.asMnemonic
 
-@ExperimentalComposeUiApi
 @Composable
 fun FileSystemEntitySelectionField(
     onButtonClicked: () -> Unit,
