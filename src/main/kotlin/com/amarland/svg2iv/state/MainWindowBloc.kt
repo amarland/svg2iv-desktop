@@ -127,8 +127,8 @@ class MainWindowBloc {
                 extensionReceiverTextFieldState = currentState.extensionReceiverTextFieldState
                     .copy(placeholder = imageVectors.firstOrNull()?.name),
                 imageVector = imageVector,
-                isPreviousPreviewButtonEnabled = false,
-                isNextPreviewButtonEnabled = imageVectors.size > 1
+                isPreviousPreviewButtonVisible = false,
+                isNextPreviewButtonVisible = imageVectors.size > 1
             )
         }
 
@@ -151,16 +151,16 @@ class MainWindowBloc {
         MainWindowEvent.PreviousPreviewButtonClicked -> {
             currentState.copy(
                 imageVector = imageVectors[--previewIndex],
-                isPreviousPreviewButtonEnabled = previewIndex > 0,
-                isNextPreviewButtonEnabled = true
+                isPreviousPreviewButtonVisible = previewIndex > 0,
+                isNextPreviewButtonVisible = true
             )
         }
 
         MainWindowEvent.NextPreviewButtonClicked -> {
             currentState.copy(
                 imageVector = imageVectors[++previewIndex],
-                isPreviousPreviewButtonEnabled = true,
-                isNextPreviewButtonEnabled = previewIndex < imageVectors.lastIndex
+                isPreviousPreviewButtonVisible = true,
+                isNextPreviewButtonVisible = previewIndex < imageVectors.lastIndex
             )
         }
 

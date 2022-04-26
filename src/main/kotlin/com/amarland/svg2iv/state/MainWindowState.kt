@@ -16,8 +16,8 @@ data class MainWindowState(
     val isAllInOneCheckboxChecked: Boolean,
     val imageVector: ImageVector?,
     val dialog: Dialog,
-    val isPreviousPreviewButtonEnabled: Boolean,
-    val isNextPreviewButtonEnabled: Boolean
+    val isPreviousPreviewButtonVisible: Boolean,
+    val isNextPreviewButtonVisible: Boolean
 ) {
 
     companion object {
@@ -33,8 +33,8 @@ data class MainWindowState(
                 isAllInOneCheckboxChecked = false,
                 imageVector = Icons.Outlined.Face,
                 dialog = Dialog.None,
-                isPreviousPreviewButtonEnabled = false,
-                isNextPreviewButtonEnabled = false
+                isPreviousPreviewButtonVisible = false,
+                isNextPreviewButtonVisible = false
             )
     }
 }
