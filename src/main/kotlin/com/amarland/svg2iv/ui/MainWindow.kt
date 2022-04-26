@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
@@ -92,7 +93,21 @@ fun MainWindowContent(bloc: MainWindowBloc) {
 private fun AppBar() {
     val bloc = LocalBloc.current
     TopAppBar(
-        title = { Text("SVG to ImageVector conversion tool") },
+        title = {
+            val title = "svg2iv | SVG to ImageVector conversion tool"
+            Text(
+                AnnotatedString(
+                    title,
+                    spanStyles = listOf(
+                        AnnotatedString.Range(
+                            item = MaterialTheme.typography.body2.toSpanStyle(),
+                            start = 9,
+                            end = title.length
+                        )
+                    )
+                )
+            )
+        },
         actions = {
             IconButton(onClick = { bloc.addEvent(MainWindowEvent.ToggleThemeButtonClicked) }) {
                 Icon(
@@ -301,23 +316,24 @@ private fun RightPanel(state: MainWindowState) {
             }
         }
 
-        PreviewSelectionButton(
-            icon = Icons.Outlined.KeyboardArrowLeft,
-            onClick = {
-                bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
-            },
-            modifier = Modifier.align(Alignment.CenterStart),
-            isEnabled = state.isPreviousPreviewButtonEnabled
-        )
-
-        PreviewSelectionButton(
-            icon = Icons.Outlined.KeyboardArrowRight,
-            onClick = {
-                bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
-            },
-            modifier = Modifier.align(Alignment.CenterEnd),
-            isEnabled = state.isNextPreviewButtonEnabled
-        )
+        if (state.isPreviousPreviewButtonVisible) {
+            PreviewSelectionButton(
+                icon = Icons.Outlined.KeyboardArrowLeft,
+                onClick = {
+                    bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
+                },
+                modifier = Modifier.align(Alignment.CenterStart)
+            )
+        }
+        if (state.isNextPreviewButtonVisible) {
+            PreviewSelectionButton(
+                icon = Icons.Outlined.KeyboardArrowRight,
+                onClick = {
+                    bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
+                },
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
+        }
 
         ExtendedFloatingActionButton(
             text = {

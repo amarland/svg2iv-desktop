@@ -10,9 +10,9 @@ fun String.asMnemonic(charIndex: Int = 0): AnnotatedString {
         this,
         spanStyles = listOf(
             AnnotatedString.Range(
-                SpanStyle(textDecoration = TextDecoration.Underline),
-                charIndex,
-                charIndex + 1
+                item = SpanStyle(textDecoration = TextDecoration.Underline),
+                start = charIndex,
+                end = charIndex + 1
             )
         )
     )

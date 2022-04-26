@@ -15,7 +15,7 @@ fun PreviewSelectionButton(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier,
-    isEnabled: Boolean
+    isEnabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
