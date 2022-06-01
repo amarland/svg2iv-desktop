@@ -1,10 +1,13 @@
 package com.amarland.svg2iv.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -60,9 +63,16 @@ fun MainWindowContent(bloc: MainWindowBloc) {
         CircularReveal(targetState = state.isThemeDark) { isThemeDark ->
             MaterialTheme(
                 colors = if (isThemeDark) {
-                    darkColors(primary = ANDROID_GREEN, secondary = ANDROID_BLUE)
+                    darkColors(
+                        primary = ANDROID_GREEN,
+                        secondary = ANDROID_BLUE,
+                        error = Color(0xFF9E394C)
+                    )
                 } else {
-                    lightColors(primary = ANDROID_BLUE, secondary = ANDROID_GREEN)
+                    lightColors(
+                        primary = ANDROID_BLUE,
+                        secondary = ANDROID_GREEN
+                    )
                 },
                 typography = Typography(defaultFontFamily = WORK_SANS)
             ) {
@@ -81,7 +91,13 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                     when (val dialog = state.dialog) {
                         is Dialog.About -> AboutDialog(dialog)
                         is Dialog.ErrorMessages -> ErrorMessagesDialog(dialog)
-                        Dialog.None -> {}
+                        Dialog.None -> {
+                            if (state.isWorkInProgress) {
+                                SimpleDialog(isTransparent = true) {
+                                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -125,47 +141,39 @@ private fun AppBar() {
     )
 }
 
-@Composable
-private fun Dialog(content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(
-                // barrier/scrim
-                color = Color.Black.copy(alpha = 0.74F)
-            )
-    ) {
-        Surface(
-            modifier = Modifier.widthIn(min = 320.dp, max = 680.dp)
-                .padding(16.dp)
-                .align(alignment = Alignment.Center),
-            shape = MaterialTheme.shapes.medium,
-            content = content
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun AboutDialog(dialog: Dialog.About) {
-    Dialog {
-        LazyColumn {
-            items(dialog.dependencies) { dependency ->
-                val licenseCount = dependency.moduleLicenses?.size ?: 0
-                ListItem(
-                    overlineText = {
-                        Text("$licenseCount ${if (licenseCount == 1) "license" else "licenses"}")
-                    },
-                    text = { Text(dependency.moduleName) },
-                    secondaryText = { Text(dependency.moduleVersion) }
-                )
+    SimpleDialog {
+        Box {
+            val listState = rememberLazyListState()
+            LazyColumn(state = listState) {
+                items(dialog.dependencies) { dependency ->
+                    val licenseCount = dependency.moduleLicenses?.size ?: 0
+                    ListItem(
+                        overlineText = {
+                            Text(
+                                "$licenseCount ${if (licenseCount == 1) "license" else "licenses"}"
+                            )
+                        },
+                        text = { Text(dependency.moduleName) },
+                        secondaryText = { Text(dependency.moduleVersion) }
+                    )
+                }
             }
+            VerticalScrollbar(
+                modifier = Modifier.fillMaxHeight()
+                    .padding(all = 16.dp)
+                    .align(Alignment.CenterEnd),
+                adapter = rememberScrollbarAdapter(scrollState = listState)
+            )
         }
     }
 }
 
 @Composable
 private fun ErrorMessagesDialog(dialog: Dialog.ErrorMessages) {
-    Dialog {
+    SimpleDialog {
         Column(modifier = Modifier.padding(top = 24.dp)) {
             for (message in dialog.messages) {
                 Text(
@@ -196,6 +204,32 @@ private fun ErrorMessagesDialog(dialog: Dialog.ErrorMessages) {
                     modifier = Modifier.padding(horizontal = 8.dp),
                 ) { Text("Close") }
             }
+        }
+    }
+}
+
+@Composable
+private fun SimpleDialog(
+    isTransparent: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(
+                // barrier/scrim
+                color = Color.Black.copy(alpha = 0.74F)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isTransparent) {
+            content()
+        } else {
+            Surface(
+                modifier = Modifier.widthIn(min = 320.dp, max = 680.dp)
+                    .padding(16.dp),
+                shape = MaterialTheme.shapes.medium,
+                content = content
+            )
         }
     }
 }
@@ -307,11 +341,17 @@ private fun RightPanel(state: MainWindowState) {
             // between different IVs using `VectorPainter`
             val notPainter = remember { ImageVectorNotPainter() } // not a sub-class of `Painter`
             val size = DpSize(maxWidth, maxHeight)
+            val tint = if (state.imageVector == null) {
+                MaterialTheme.colors.error
+            } else {
+                Color.Unspecified
+            }
             Canvas(modifier = Modifier.size(size)) {
                 notPainter.drawImageVectorInto(
                     this,
                     state.imageVector ?: CustomIcons.ErrorCircle,
-                    IntSize(size.width.toPx().toInt(), size.height.toPx().toInt())
+                    IntSize(size.width.toPx().toInt(), size.height.toPx().toInt()),
+                    tint
                 )
             }
         }
@@ -319,18 +359,14 @@ private fun RightPanel(state: MainWindowState) {
         if (state.isPreviousPreviewButtonVisible) {
             PreviewSelectionButton(
                 icon = Icons.Outlined.KeyboardArrowLeft,
-                onClick = {
-                    bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked)
-                },
+                onClick = { bloc.addEvent(MainWindowEvent.PreviousPreviewButtonClicked) },
                 modifier = Modifier.align(Alignment.CenterStart)
             )
         }
         if (state.isNextPreviewButtonVisible) {
             PreviewSelectionButton(
                 icon = Icons.Outlined.KeyboardArrowRight,
-                onClick = {
-                    bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked)
-                },
+                onClick = { bloc.addEvent(MainWindowEvent.NextPreviewButtonClicked) },
                 modifier = Modifier.align(Alignment.CenterEnd)
             )
         }
@@ -344,9 +380,7 @@ private fun RightPanel(state: MainWindowState) {
                         .copy(fontWeight = FontWeight.SemiBold)
                 )
             },
-            onClick = {
-                bloc.addEvent(MainWindowEvent.ConvertButtonClicked)
-            },
+            onClick = { bloc.addEvent(MainWindowEvent.ConvertButtonClicked) },
             modifier = Modifier.align(Alignment.BottomEnd),
             icon = {
                 Icon(

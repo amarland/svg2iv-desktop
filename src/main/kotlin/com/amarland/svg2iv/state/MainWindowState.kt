@@ -9,6 +9,7 @@ import com.amarland.svg2iv.util.Dependency
 @Immutable
 data class MainWindowState(
     val isThemeDark: Boolean,
+    val isWorkInProgress: Boolean,
     val sourceFilesSelectionTextFieldState: TextFieldState,
     val destinationDirectorySelectionTextFieldState: TextFieldState,
     val areFileSystemEntitySelectionButtonsEnabled: Boolean,
@@ -26,6 +27,7 @@ data class MainWindowState(
         fun initial(isThemeDark: Boolean) =
             MainWindowState(
                 isThemeDark = isThemeDark,
+                isWorkInProgress = false,
                 sourceFilesSelectionTextFieldState = TextFieldState.DEFAULT,
                 destinationDirectorySelectionTextFieldState = TextFieldState.DEFAULT,
                 areFileSystemEntitySelectionButtonsEnabled = true,

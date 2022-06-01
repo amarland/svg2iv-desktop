@@ -1,3 +1,5 @@
+@file:JvmName("Main")
+
 package com.amarland.svg2iv
 
 import androidx.compose.runtime.CompositionLocalProvider

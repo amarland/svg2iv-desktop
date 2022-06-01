@@ -2,6 +2,8 @@ package com.amarland.svg2iv.ui
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
@@ -10,6 +12,7 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -27,7 +30,12 @@ class ImageVectorNotPainter {
     private val pathMeasure = PathMeasure()
     private val pathParser = PathParser()
 
-    fun drawImageVectorInto(target: DrawScope, imageVector: ImageVector, size: IntSize) {
+    fun drawImageVectorInto(
+        target: DrawScope,
+        imageVector: ImageVector,
+        size: IntSize,
+        tint: Color = Color.Unspecified
+    ) {
         val hashCode = imageVector.hashCode()
         if (cachedImageBitmap == null ||
             hashCode != cachedImageVectorHashCode ||
@@ -50,7 +58,7 @@ class ImageVectorNotPainter {
                     }
                     clipRect(0F, 0F, viewportWidth, viewportHeight)
                 }) {
-                    drawVectorGroup(imageVector.root)
+                    drawVectorGroup(imageVector.root, tint)
                 }
             }
             cachedImageBitmap = bitmap
@@ -62,7 +70,7 @@ class ImageVectorNotPainter {
         target.drawImage(image)
     }
 
-    private fun DrawScope.drawVectorGroup(vectorGroup: VectorGroup) {
+    private fun DrawScope.drawVectorGroup(vectorGroup: VectorGroup, tint: Color) {
         withTransform({
             with(vectorGroup) {
                 if (translationX != DefaultTranslationX ||
@@ -87,14 +95,14 @@ class ImageVectorNotPainter {
         }) {
             for (node in vectorGroup) {
                 when (node) {
-                    is VectorGroup -> drawVectorGroup(node)
-                    is VectorPath -> drawVectorPath(node)
+                    is VectorGroup -> drawVectorGroup(node, tint)
+                    is VectorPath -> drawVectorPath(node, tint)
                 }
             }
         }
     }
 
-    private fun DrawScope.drawVectorPath(vectorPath: VectorPath) {
+    private fun DrawScope.drawVectorPath(vectorPath: VectorPath, tint: Color) {
         with(vectorPath) {
             val path = pathData.toPath()
             if (trimPathStart != DefaultTrimPathStart || trimPathEnd != DefaultTrimPathEnd) {
@@ -114,12 +122,13 @@ class ImageVectorNotPainter {
                     addPath(newPath)
                 }
             }
+            val colorFilter = if (tint.isSpecified) ColorFilter.tint(tint) else null
             fill?.let { fill ->
-                drawPath(path, fill, fillAlpha)
+                drawPath(path, fill, fillAlpha, colorFilter = colorFilter)
             }
             stroke?.let { stroke ->
                 val style = Stroke(strokeLineWidth, strokeLineMiter, strokeLineCap, strokeLineJoin)
-                drawPath(path, stroke, strokeAlpha, style)
+                drawPath(path, stroke, strokeAlpha, style, colorFilter = colorFilter)
             }
         }
     }
