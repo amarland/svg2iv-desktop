@@ -111,8 +111,9 @@ suspend fun openDirectorySelectionDialog(parent: Frame): String? {
 
     return JFileChooser().apply {
         fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-        showDialog(parent, "Select")
-    }.selectedFile.absolutePath
+    }.takeIf { chooser ->
+        chooser.showDialog(parent, "Select") == JFileChooser.APPROVE_OPTION
+    }?.selectedFile?.absolutePath
 }
 
 private suspend fun readPowerShellScriptOutputLines(script: String): List<String>? =

@@ -17,7 +17,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -109,6 +108,7 @@ class MainWindowBloc {
         is MainWindowEvent.SourceFilesSelectionDialogClosed -> {
             val paths = event.paths
             currentState.copy(
+                isWorkInProgress = true,
                 sourceFilesSelectionTextFieldState = TextFieldState(
                     value = paths.singleOrNull() ?: paths.joinToString(),
                     isError = paths.any { path -> !File(path).exists() }
@@ -122,6 +122,7 @@ class MainWindowBloc {
                 if (imageVectors.isNotEmpty()) imageVectors[0]
                 else currentState.imageVector
             currentState.copy(
+                isWorkInProgress = false,
                 sourceFilesSelectionTextFieldState = currentState.sourceFilesSelectionTextFieldState
                     .copy(isError = didErrorsOccur),
                 extensionReceiverTextFieldState = currentState.extensionReceiverTextFieldState
@@ -194,11 +195,12 @@ class MainWindowBloc {
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    private fun listDependencies() = useResource("license-report/license-report.json") {
-        moshi.adapter<LicenseReport>()
-            .fromJson(it.source().buffer())
-            ?.dependencies ?: emptyList()
-    }
+    private fun listDependencies() =
+        useResource("license-report/license-report.json") {
+            moshi.adapter<LicenseReport>()
+                .fromJson(it.source().buffer())
+                ?.dependencies ?: emptyList()
+        }
 
     private fun parseSourceFiles(paths: List<String>) {
         if (paths.isEmpty()) return
@@ -241,6 +243,9 @@ class MainWindowBloc {
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00
 
-        private val moshi = Moshi.Builder().build()
+        private val moshi by lazy(
+            mode = LazyThreadSafetyMode.NONE,
+            initializer = Moshi.Builder()::build
+        )
     }
 }
