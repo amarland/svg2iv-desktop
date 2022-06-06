@@ -10,8 +10,6 @@ sealed class MainWindowEvent {
 
     data class SourceFilesSelectionDialogClosed(val paths: List<String>) : MainWindowEvent()
 
-    object SourceFilesParsed : MainWindowEvent()
-
     object SelectDestinationDirectoryButtonClicked : MainWindowEvent()
 
     data class DestinationDirectorySelectionDialogClosed(val path: String?) : MainWindowEvent()

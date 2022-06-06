@@ -333,14 +333,15 @@ private fun RightPanel(state: MainWindowState) {
     ) {
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize(0.65F)
-                .aspectRatio(1F)
+                .aspectRatio(1F),
+            contentAlignment = Alignment.Center
         ) {
             Checkerboard()
 
             // resorting to drawing manually because of unexplained issues when going back and forth
             // between different IVs using `VectorPainter`
             val notPainter = remember { ImageVectorNotPainter() } // not a sub-class of `Painter`
-            val size = DpSize(maxWidth, maxHeight)
+            val size = DpSize(maxWidth, maxHeight) * 0.925F
             val tint = if (state.imageVector == null) {
                 MaterialTheme.colors.error
             } else {

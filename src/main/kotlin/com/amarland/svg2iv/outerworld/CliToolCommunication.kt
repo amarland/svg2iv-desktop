@@ -7,13 +7,8 @@ import okio.buffer
 import okio.source
 import java.io.IOException
 import java.io.Reader
+import java.io.StringReader
 
-@Suppress("BlockingMethodInNonBlockingContext")
-@Throws(
-    IOException::class,
-    InterruptedException::class,
-    SecurityException::class
-)
 suspend fun callCliTool(
     sourceFilePaths: List<String>,
     extensionReceiver: String? = null,
@@ -26,17 +21,23 @@ suspend fun callCliTool(
     require(sourceFilePaths.isNotEmpty())
 
     return withContext(Dispatchers.IO) {
-        val process = startProcess(sourceFilePaths, extensionReceiver)
-        val imageVectors = process.inputStream.source().buffer()
-            .use { bufferedSource ->
-                bufferedSource.takeUnless { source -> source.exhausted() }
-                    ?.let { source -> ImageVectorArrayJsonAdapter().fromJson(source) }
-                    ?: emptyList()
-            }
-        process.errorStream.bufferedReader().use(doWithErrorMessages)
-        process.waitFor()
+        runCatching {
+            val process = startProcess(sourceFilePaths, extensionReceiver)
+            val imageVectors = process.inputStream.source().buffer()
+                .use { bufferedSource ->
+                    bufferedSource.takeUnless { source -> source.exhausted() }
+                        ?.let(ImageVectorArrayJsonAdapter()::fromJson)
+                        ?: emptyList()
+                }
+            process.errorStream.bufferedReader().use(doWithErrorMessages)
+            process.waitFor()
 
-        return@withContext imageVectors
+            return@runCatching imageVectors
+        }.onFailure { throwable ->
+            throwable.message
+                ?.let(::StringReader)
+                ?.let(doWithErrorMessages)
+        }.getOrDefault(emptyList())
     }
 }
 
