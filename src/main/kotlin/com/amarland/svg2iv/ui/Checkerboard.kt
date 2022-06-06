@@ -52,13 +52,13 @@ fun Checkerboard(
                     color = if (odd) oddSquareActualColor else evenSquareActualColor,
                 )
 
-                if (x < size.width) {
+                if (x + squareSizeInPixels < size.width) {
                     x += squareSizeInPixels
-                    odd = !odd
                 } else {
                     x = (y + squareSizeInPixels) % (squareSizeInPixels)
                     y += squareSizeInPixels
                 }
+                odd = !odd
             }
         }
     }
