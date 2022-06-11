@@ -29,6 +29,7 @@ import okio.source
 import java.io.File
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
+import com.amarland.svg2iv.state.MainWindowBloc as Bloc
 
 class MainWindowBloc {
 
@@ -250,7 +251,7 @@ class MainWindowBloc {
 
         @OptIn(ExperimentalComposeUiApi::class)
         @JvmField
-        val SHORTCUT_BINDINGS = buildMap<ShortcutKey, (MainWindowBloc) -> Unit> {
+        val SHORTCUT_BINDINGS = buildMap<ShortcutKey, (Bloc) -> Unit> {
             this[ShortcutKey.newInstance(Key.S, isAltPressed = true)] =
                 { bloc -> bloc.addEvent(MainWindowEvent.SelectSourceFilesButtonClicked) }
 
@@ -276,16 +277,11 @@ class MainWindowBloc {
         )
     }
 
-    private object StateFlowDelegate : ReadWriteProperty<MainWindowBloc, MainWindowState> {
+    private object StateFlowDelegate : ReadWriteProperty<Bloc, MainWindowState> {
 
-        override fun getValue(thisRef: MainWindowBloc, property: KProperty<*>) =
-            thisRef._state.value
+        override fun getValue(thisRef: Bloc, property: KProperty<*>) = thisRef._state.value
 
-        override fun setValue(
-            thisRef: MainWindowBloc,
-            property: KProperty<*>,
-            value: MainWindowState
-        ) {
+        override fun setValue(thisRef: Bloc, property: KProperty<*>, value: MainWindowState) {
             thisRef._state.value = value
         }
     }
