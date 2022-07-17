@@ -9,6 +9,7 @@ import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.outerworld.openLogFileInPreferredApplication
 import com.amarland.svg2iv.outerworld.readErrorMessages
 import com.amarland.svg2iv.outerworld.writeImageVectorsToFile
+import com.amarland.svg2iv.ui.SnackbarInfo
 import com.amarland.svg2iv.util.LicenseReport
 import com.amarland.svg2iv.util.ShortcutKey
 import com.squareup.moshi.Moshi
@@ -22,7 +23,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import okio.buffer
 import okio.source
@@ -38,9 +38,6 @@ class MainWindowBloc {
 
     private val coroutineScope = MainScope()
 
-    private val _effects = Channel<MainWindowEffect>(Channel.UNLIMITED)
-    val effects = _effects.receiveAsFlow()
-
     private val _state = MutableStateFlow(
         MainWindowState.initial(isThemeDark = isDarkModeEnabled)
     )
@@ -54,7 +51,6 @@ class MainWindowBloc {
         eventSink = Channel(Channel.UNLIMITED)
         coroutineScope.launch {
             eventSink.consumeAsFlow().collect { event ->
-                mapEventToEffect(event)?.also { effect -> _effects.send(effect) }
                 mapEventToState(event).collect { state -> currentState = state }
             }
         }
@@ -63,21 +59,6 @@ class MainWindowBloc {
     fun addEvent(event: MainWindowEvent) {
         coroutineScope.launch { eventSink.send(event) }
     }
-
-    private fun mapEventToEffect(event: MainWindowEvent): MainWindowEffect? =
-        when (event) {
-            MainWindowEvent.SelectSourceFilesButtonClicked ->
-                MainWindowEffect.OpenFileSelectionDialog.takeIf {
-                    currentState.areFileSystemEntitySelectionButtonsEnabled
-                }
-
-            MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
-                MainWindowEffect.OpenDirectorySelectionDialog.takeIf {
-                    currentState.areFileSystemEntitySelectionButtonsEnabled
-                }
-
-            else -> null
-        }
 
     private fun mapEventToState(event: MainWindowEvent): Flow<MainWindowState> =
         flow {
@@ -91,11 +72,33 @@ class MainWindowBloc {
                     )
 
                 MainWindowEvent.AboutButtonClicked ->
-                    emit(currentState.copy(dialog = Dialog.About(listDependencies())))
+                    emit(
+                        currentState.copy(
+                            informationDialog = InformationDialog.About(
+                                listDependencies()
+                            )
+                        )
+                    )
 
-                MainWindowEvent.SelectSourceFilesButtonClicked,
+                MainWindowEvent.SelectSourceFilesButtonClicked ->
+                    if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
+                        emit(
+                            currentState.copy(
+                                areFileSystemEntitySelectionButtonsEnabled = false,
+                                selectionDialog = SelectionDialog.Source
+                            )
+                        )
+                    }
+
                 MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
-                    emit(currentState.copy(areFileSystemEntitySelectionButtonsEnabled = false))
+                    if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
+                        emit(
+                            currentState.copy(
+                                areFileSystemEntitySelectionButtonsEnabled = false,
+                                selectionDialog = SelectionDialog.Destination
+                            )
+                        )
+                    }
 
                 is MainWindowEvent.SourceFilesSelectionDialogClosed ->
                     onSourceFilesSelectionDialogClosed(event.paths)
@@ -104,6 +107,7 @@ class MainWindowBloc {
                     val path = event.path
                     emit(
                         currentState.copy(
+                            selectionDialog = null,
                             destinationDirectorySelectionTextFieldState = TextFieldState(
                                 value = path.orEmpty(),
                                 isError = path != null && !File(path).exists()
@@ -156,7 +160,7 @@ class MainWindowBloc {
                                 readErrorMessages(MAX_ERROR_MESSAGE_COUNT)
                             emit(
                                 currentState.copy(
-                                    dialog = Dialog.ErrorMessages(
+                                    informationDialog = InformationDialog.ErrorMessages(
                                         errorMessages,
                                         isReadMoreButtonVisible = hasMoreThanLimit
                                     )
@@ -171,11 +175,11 @@ class MainWindowBloc {
                 }
 
                 MainWindowEvent.ErrorMessagesDialogCloseRequested ->
-                    emit(currentState.copy(dialog = Dialog.None))
+                    emit(currentState.copy(informationDialog = null))
 
                 MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
                     openLogFileInPreferredApplication()
-                    emit(currentState.copy(dialog = Dialog.None))
+                    emit(currentState.copy(informationDialog = null))
                 }
             }
         }
@@ -186,6 +190,7 @@ class MainWindowBloc {
         emit(
             currentState.copy(
                 isWorkInProgress = true,
+                selectionDialog = null,
                 sourceFilesSelectionTextFieldState = TextFieldState(
                     value = paths.singleOrNull() ?: paths.joinToString(),
                     isError = paths.any { path -> !File(path).exists() }
@@ -219,12 +224,14 @@ class MainWindowBloc {
 
         if (didErrorsOccur) {
             val message = "Error(s) occurred while trying to display a preview of the source(s)"
-            _effects.send(
-                MainWindowEffect.ShowSnackbar(
-                    id = SNACKBAR_ID_PREVIEW_ERRORS,
-                    message = message,
-                    actionLabel = "View errors",
-                    duration = SnackbarDuration.Indefinite
+            emit(
+                currentState.copy(
+                    snackbarInfo = SnackbarInfo(
+                        id = SNACKBAR_ID_PREVIEW_ERRORS,
+                        message = message,
+                        actionLabel = "View errors",
+                        duration = SnackbarDuration.Indefinite
+                    )
                 )
             )
         }
@@ -261,7 +268,7 @@ class MainWindowBloc {
             this[ShortcutKey.newInstance(Key.Escape)] =
                 { bloc ->
                     val state = bloc.state.value
-                    if (state.dialog is Dialog.ErrorMessages) {
+                    if (state.informationDialog is InformationDialog.ErrorMessages) {
                         bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
                     }
                 }
