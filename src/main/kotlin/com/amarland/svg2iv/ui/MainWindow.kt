@@ -13,7 +13,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
@@ -25,23 +30,19 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.amarland.svg2iv.outerworld.DirectorySelectionDialog
+import com.amarland.svg2iv.outerworld.FileSelectionDialog
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
-import com.amarland.svg2iv.outerworld.openDirectorySelectionDialog
-import com.amarland.svg2iv.outerworld.openFileSelectionDialog
-import com.amarland.svg2iv.state.Dialog
+import com.amarland.svg2iv.state.InformationDialog
 import com.amarland.svg2iv.state.MainWindowBloc
-import com.amarland.svg2iv.state.MainWindowEffect
 import com.amarland.svg2iv.state.MainWindowEvent
 import com.amarland.svg2iv.state.MainWindowState
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import com.amarland.svg2iv.state.SelectionDialog
 
 private val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
 }
 
-// TODO: this is meant to be temporary (until dialogs are rewritten to use the new Window API)
 val LocalComposeWindow = compositionLocalOf<ComposeWindow> {
     error("CompositionLocal LocalComposeWindow not provided!")
 }
@@ -88,10 +89,10 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         }
                     }
 
-                    when (val dialog = state.dialog) {
-                        is Dialog.About -> AboutDialog(dialog)
-                        is Dialog.ErrorMessages -> ErrorMessagesDialog(dialog)
-                        Dialog.None -> {
+                    when (val dialog = state.informationDialog) {
+                        is InformationDialog.About -> AboutDialog(dialog)
+                        is InformationDialog.ErrorMessages -> ErrorMessagesDialog(dialog)
+                        null -> {
                             if (state.isWorkInProgress) {
                                 SimpleDialog(isTransparent = true) {
                                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
@@ -143,7 +144,7 @@ private fun AppBar() {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-private fun AboutDialog(dialog: Dialog.About) {
+private fun AboutDialog(dialog: InformationDialog.About) {
     SimpleDialog {
         Box {
             val listState = rememberLazyListState()
@@ -172,7 +173,7 @@ private fun AboutDialog(dialog: Dialog.About) {
 }
 
 @Composable
-private fun ErrorMessagesDialog(dialog: Dialog.ErrorMessages) {
+private fun ErrorMessagesDialog(dialog: InformationDialog.ErrorMessages) {
     SimpleDialog {
         Column(modifier = Modifier.padding(top = 24.dp)) {
             for (message in dialog.messages) {
@@ -248,16 +249,35 @@ private fun LeftPanel(state: MainWindowState) {
         modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
         scaffoldState = scaffoldState
     ) {
-        // TODO: use `State` for "effects"?
-        val window = LocalComposeWindow.current
-        val coroutineScope = rememberCoroutineScope()
-        var job: Job? by remember { mutableStateOf(null) }
-        DisposableEffect(scaffoldState) {
-            job = bloc.effects.onEach { effect ->
-                launchEffect(effect, bloc, window, scaffoldState)
-            }.launchIn(coroutineScope)
+        if (state.selectionDialog != null) {
+            val window = LocalComposeWindow.current
+            when (state.selectionDialog) {
+                SelectionDialog.Source -> {
+                    FileSelectionDialog(window) { selectedPaths ->
+                        bloc.addEvent(
+                            MainWindowEvent.SourceFilesSelectionDialogClosed(selectedPaths)
+                        )
+                    }
+                }
+                SelectionDialog.Destination -> {
+                    DirectorySelectionDialog(window) { selectedPath ->
+                        bloc.addEvent(
+                            MainWindowEvent.DestinationDirectorySelectionDialogClosed(selectedPath)
+                        )
+                    }
+                }
+            }
+        }
 
-            onDispose { job?.cancel() }
+        if (state.snackbarInfo != null) {
+            LaunchedEffect(state.snackbarInfo) {
+                val (id, message, actionLabel, duration) = state.snackbarInfo
+                val result = scaffoldState.snackbarHostState
+                    .showSnackbar(message, actionLabel, duration)
+                if (result == SnackbarResult.ActionPerformed) {
+                    bloc.addEvent(MainWindowEvent.SnackbarActionButtonClicked(id))
+                }
+            }
         }
 
         Column(
@@ -390,35 +410,5 @@ private fun RightPanel(state: MainWindowState) {
                 )
             }
         )
-    }
-}
-
-private suspend fun launchEffect(
-    effect: MainWindowEffect,
-    bloc: MainWindowBloc,
-    window: ComposeWindow,
-    scaffoldState: ScaffoldState
-) {
-    when (effect) {
-        is MainWindowEffect.ShowSnackbar -> {
-            val (snackbarId, message, actionLabel, duration) = effect
-            val result = scaffoldState.snackbarHostState
-                .showSnackbar(message, actionLabel, duration)
-            snackbarId.takeIf { result == SnackbarResult.ActionPerformed }
-                ?.let(MainWindowEvent::SnackbarActionButtonClicked)
-                ?.let(bloc::addEvent)
-        }
-
-        is MainWindowEffect.OpenFileSelectionDialog ->
-            openFileSelectionDialog(window).also { selectedPaths ->
-                bloc.addEvent(MainWindowEvent.SourceFilesSelectionDialogClosed(selectedPaths))
-            }
-
-        is MainWindowEffect.OpenDirectorySelectionDialog ->
-            openDirectorySelectionDialog(window).also { selectedPath ->
-                bloc.addEvent(
-                    MainWindowEvent.DestinationDirectorySelectionDialogClosed(selectedPath)
-                )
-            }
     }
 }
