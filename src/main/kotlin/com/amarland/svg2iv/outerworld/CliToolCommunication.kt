@@ -1,10 +1,9 @@
 package com.amarland.svg2iv.outerworld
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.google.iot.cbor.CborReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okio.buffer
-import okio.source
 import java.io.IOException
 import java.io.Reader
 import java.io.StringReader
@@ -21,23 +20,19 @@ suspend fun callCliTool(
     require(sourceFilePaths.isNotEmpty())
 
     return withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             val process = startProcess(sourceFilePaths, extensionReceiver)
-            val imageVectors = process.inputStream.source().buffer()
-                .use { bufferedSource ->
-                    bufferedSource.takeUnless { source -> source.exhausted() }
-                        ?.let(ImageVectorArrayJsonAdapter()::fromJson)
-                        ?: emptyList()
-                }
+            val imageVectors = process.inputStream.use { stream ->
+                ImageVector.fromCbor(CborReader.createFromInputStream(stream))
+            }
             process.errorStream.bufferedReader().use(doWithErrorMessages)
             process.waitFor()
 
-            return@runCatching imageVectors
-        }.onFailure { throwable ->
-            throwable.message
-                ?.let(::StringReader)
-                ?.let(doWithErrorMessages)
-        }.getOrDefault(emptyList())
+            return@withContext imageVectors
+        } catch (ioe: IOException) {
+            ioe.message?.let { message -> doWithErrorMessages(StringReader(message)) }
+        }
+        return@withContext emptyList()
     }
 }
 

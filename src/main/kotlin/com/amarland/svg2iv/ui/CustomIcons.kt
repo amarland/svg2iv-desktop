@@ -144,7 +144,6 @@ object CustomIcons {
     val SourceFiles =
         materialIcon("SourceFiles") {
             materialPath {
-                // M12,12L16,16H13.5V19H10.5V16H8L12,12Z
                 moveTo(16F, 0F)
                 horizontalLineTo(8F)
                 curveTo(6.9F, 0F, 6F, .9F, 6F, 2F)
