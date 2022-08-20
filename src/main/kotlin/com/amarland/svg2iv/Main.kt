@@ -24,14 +24,14 @@ import com.amarland.svg2iv.util.ShortcutKey
 private val mainWindowBloc = MainWindowBloc()
 
 fun main() = singleWindowApplication(
-    title = "svg2iv",
-    icon = useResource("logo.svg") { stream -> loadSvgPainter(stream, Density(1F)) },
-    resizable = false,
     state = WindowState(
         position = WindowPosition.Aligned(Alignment.Center),
         width = 800.dp,
         height = 350.dp
     ),
+    title = "svg2iv",
+    icon = useResource("logo.svg") { stream -> loadSvgPainter(stream, Density(1F)) },
+    resizable = false,
     onPreviewKeyEvent = ::onPreviewKeyEvent
 ) {
     CompositionLocalProvider(LocalComposeWindow provides window) {

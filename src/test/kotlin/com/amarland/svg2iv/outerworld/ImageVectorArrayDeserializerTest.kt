@@ -1,32 +1,42 @@
 package com.amarland.svg2iv.outerworld
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import com.google.iot.cbor.CborArray
+import com.google.iot.cbor.CborReader
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions
+import org.json.JSONArray
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class ImageVectorArrayJsonAdapterTest {
+class ImageVectorArrayDeserializerTest {
 
     @Test
-    fun fromJson() {
+    fun fromCbor() {
         @Language("JSON")
-        val sourceJson = """
+        val sourceJsonString = """
             |[
             |    {
             |        "vectorName": "does_not_matter",
             |        "viewportWidth": 304.0,
             |        "viewportHeight": 290.0,
+            |        "width": 608.0,
+            |        "height": 580.0,
+            |        "tintColor": ${Color.LightGray.toArgb()},
+            |        "tintBlendMode": 3,
             |        "nodes": [
             |            {
             |                "groupName": "still_does_not",
@@ -39,23 +49,23 @@ class ImageVectorArrayJsonAdapterTest {
             |                "translationY": 50.0,
             |                "clipPathData": [
             |                   {
-            |                       "command": "moveTo",
+            |                       "command": 1,
             |                       "arguments": [27.5, 27.5]
             |                   },
             |                   {
-            |                       "command": "horizontalLineTo",
+            |                       "command": 5,
             |                       "arguments": [276.5]
             |                   },
             |                   {
-            |                       "command": "verticalLineTo",
+            |                       "command": 7,
             |                       "arguments": [262.5]
             |                   },
             |                   {
-            |                       "command": "lineTo",
+            |                       "command": 3,
             |                       "arguments": [27.5, 262.5]
             |                   },
             |                   {
-            |                       "command": "close",
+            |                       "command": 0,
             |                       "arguments": null
             |                   }
             |                ],
@@ -63,50 +73,51 @@ class ImageVectorArrayJsonAdapterTest {
             |                   {
             |                       "pathNodes": [
             |                           {
-            |                               "command": "moveTo",
+            |                               "command": 1,
             |                               "arguments": [2, 111]
             |                           },
             |                           {
-            |                               "command": "horizontalLineTo",
+            |                               "command": 5,
             |                               "arguments": [300]
             |                           },
             |                           {
-            |                               "command": "relativeLineTo",
+            |                               "command": 4,
             |                               "arguments": [-242.7, 176.3]
             |                           },
             |                           {
-            |                               "command": "relativeLineTo",
+            |                               "command": 4,
             |                               "arguments": [92.7, -285.3]
             |                           },
             |                           {
-            |                               "command": "relativeLineTo",
+            |                               "command": 4,
             |                               "arguments": [92.7, 285.3]
             |                           },
             |                           {
-            |                               "command": "close",
+            |                               "command": 0,
             |                               "arguments": null
             |                           }
             |                       ],
-            |                       "fillType": "evenOdd",
+            |                       "fillType": 1,
             |                       "pathName": "neither_does_it_here",
             |                       "fill": {
-            |                           "type": "radial",
+            |                           "isLinear": false,
             |                           "colors": [
-            |                               [255, 255, 0, 0],
-            |                               [255, 0, 255, 0],
-            |                               [255, 0, 0, 255]
+            |                               ${Color.Red.toArgb()},
+            |                               ${Color.Green.toArgb()},
+            |                               ${Color.Blue.toArgb()}
             |                           ],
             |                           "stops": [0.25, 0.5, 0.75],
             |                           "centerX": 100.001,
             |                           "centerY": 100.001,
-            |                           "radius": 20.0
+            |                           "radius": 20.0,
+            |                           "tileMode": 2
             |                       },
             |                       "fillAlpha": 0.9125,
-            |                       "stroke": [225, 128, 128, 128],
+            |                       "stroke": ${0xE1808080},
             |                       "strokeAlpha": 1.0,
             |                       "strokeLineWidth": 15.0,
-            |                       "strokeLineCap": "butt",
-            |                       "strokeLineJoin": "miter",
+            |                       "strokeLineCap": 0,
+            |                       "strokeLineJoin": 1,
             |                       "strokeLineMiter": 4.6667
             |                   }
             |                ]
@@ -114,38 +125,42 @@ class ImageVectorArrayJsonAdapterTest {
             |            {
             |               "pathNodes": [
             |                   {
-            |                       "command": "moveTo",
+            |                       "command": 1,
             |                       "arguments": [122.55, 80.325]
             |                   },
             |                   {
-            |                       "command": "arcTo",
-            |                       "arguments": [45, 45, 0, true, false, 167.25, 125.325]
+            |                       "command": 17,
+            |                       "arguments": [45, 45, 0, 1, 0, 167.25, 125.325]
             |                   },
             |                   {
-            |                       "command": "lineTo",
+            |                       "command": 3,
             |                       "arguments": [167.25, 80.325]
             |                   },
             |                   {
-            |                       "command": "close",
+            |                       "command": 0,
             |                       "arguments": []
             |                   }
             |               ],
-            |               "fill": [127, 85, 170, 255]
+            |               "fill": ${Color(85, 170, 255, 127).toArgb()}
             |            }
             |        ]
             |    },
             |    null
             |]
         """.trimMargin()
+        val sourceCborArray = CborArray.createFromJSONArray(JSONArray(sourceJsonString))
+        val sourceCborByteArray = sourceCborArray.toCborByteArray()
 
         @Suppress("BooleanLiteralArgument")
         val expectedImageVectors = listOf(
             ImageVector.Builder(
                 name = "does_not_matter",
-                defaultWidth = 304.dp,
-                defaultHeight = 290.dp,
+                defaultWidth = 608.dp,
+                defaultHeight = 580.dp,
                 viewportWidth = 304F,
-                viewportHeight = 290F
+                viewportHeight = 290F,
+                tintColor = Color.LightGray,
+                tintBlendMode = BlendMode.Modulate
             ).group(
                 name = "still_does_not",
                 rotate = 45F,
@@ -170,7 +185,8 @@ class ImageVectorArrayJsonAdapterTest {
                         0.5F to Color.Green,
                         0.75F to Color.Blue,
                         center = Offset(100.001F, 100.001F),
-                        radius = 20F
+                        radius = 20F,
+                        tileMode = TileMode.Mirror
                     ),
                     fillAlpha = 0.9125F,
                     stroke = SolidColor(Color(0xE1808080)),
@@ -196,7 +212,15 @@ class ImageVectorArrayJsonAdapterTest {
             null
         )
 
-        val actualImageVectors = ImageVectorArrayJsonAdapter().fromJson(sourceJson)
-        Assertions.assertIterableEquals(expectedImageVectors, actualImageVectors)
+        val actualImageVectors = ImageVector.fromCbor(
+            CborReader.createFromByteArray(sourceCborByteArray)
+        )
+
+        fun Iterable<ImageVector?>.stringify() =
+            filterNotNull().map { imageVector ->
+                getCodeBlockForImageVector(imageVector).toString()
+            }
+
+        assertEquals(expectedImageVectors.stringify(), actualImageVectors.stringify())
     }
 }

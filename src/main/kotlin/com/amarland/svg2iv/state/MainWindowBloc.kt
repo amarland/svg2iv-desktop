@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import okio.buffer
 import okio.source
 import java.io.File
+import java.io.IOException
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 import com.amarland.svg2iv.state.MainWindowBloc as Bloc
@@ -143,12 +144,14 @@ class MainWindowBloc {
                 }
 
                 MainWindowEvent.ConvertButtonClicked -> {
-                    runCatching {
+                    try {
                         writeImageVectorsToFile(
                             currentState.destinationDirectorySelectionTextFieldState.value,
                             imageVectors.filterNotNull(),
                             currentState.extensionReceiverTextFieldState.value
                         )
+                    } catch (ioe: IOException) {
+                        TODO()
                     }
                     emit(currentState.copy(isWorkInProgress = true))
                 }
