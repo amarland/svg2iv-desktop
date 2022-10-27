@@ -16,6 +16,7 @@ private val LOG_FILE_PATH = Path.of(APP_DATA_DIRECTORY_PATH_STRING, "svg2iv.log"
 
 fun writeProperties(properties: Properties) {
     tryOrIgnore {
+        ensureParentDirectoriesExist(PROPERTIES_FILE_PATH)
         Files.newBufferedWriter(PROPERTIES_FILE_PATH).use { writer ->
             properties.store(writer, null)
         }
@@ -33,6 +34,7 @@ fun readProperties() =
 
 fun writeErrorMessages(messageReader: Reader) {
     tryOrIgnore {
+        ensureParentDirectoriesExist(LOG_FILE_PATH)
         Files.newBufferedWriter(LOG_FILE_PATH).use(messageReader::copyTo)
     }
 }
@@ -68,6 +70,10 @@ fun openLogFileInPreferredApplication() {
             else filePath.replace(" ", "\\ ")
         }
     )
+}
+
+private fun ensureParentDirectoriesExist(path: Path) {
+    Files.createDirectories(path.parent)
 }
 
 private inline fun <T> tryOrIgnore(block: () -> T): T? =

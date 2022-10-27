@@ -53,9 +53,12 @@ class ImageVectorNotPainter {
                     val height = size.height
                     val viewportWidth = imageVector.viewportWidth
                     val viewportHeight = imageVector.viewportHeight
-                    if (width.toFloat() != viewportWidth || height.toFloat() != viewportHeight) {
-                        scale(width / viewportWidth, height / viewportHeight, Offset.Zero)
-                    }
+                    val ratio = minOf(width / viewportWidth, height / viewportHeight)
+                    val pivot = Offset(
+                        (width - viewportWidth * ratio) / 2F,
+                        (height - viewportHeight * ratio) / 2F
+                    )
+                    scale(ratio, ratio, pivot)
                     clipRect(0F, 0F, viewportWidth, viewportHeight)
                 }) {
                     drawVectorGroup(imageVector.root, tint)
