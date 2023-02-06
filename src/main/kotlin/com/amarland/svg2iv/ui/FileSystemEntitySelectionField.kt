@@ -1,12 +1,18 @@
 package com.amarland.svg2iv.ui
 
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Icon
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
 import com.amarland.svg2iv.util.asMnemonic
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileSystemEntitySelectionField(
     onButtonClicked: () -> Unit,
@@ -52,10 +59,16 @@ fun FileSystemEntitySelectionField(
             isError = isError
         )
 
-        OutlinedButton(
+        Spacer(modifier = Modifier.width(8.dp))
+
+        OutlinedIconButton(
             onButtonClicked,
-            modifier = Modifier.height(56.dp).padding(start = 8.dp),
-            enabled = isButtonEnabled
+            modifier = Modifier.sizeIn(minWidth = 56.dp, minHeight = 56.dp),
+            enabled = isButtonEnabled,
+            shape = TextFieldDefaults.outlinedShape,
+            colors = IconButtonDefaults.outlinedIconButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
         ) {
             Icon(imageVector = CustomIcons.ExploreFiles, contentDescription = null)
         }

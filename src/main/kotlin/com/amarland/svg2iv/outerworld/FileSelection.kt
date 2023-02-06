@@ -7,9 +7,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.AwtWindow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.withContext
 import java.awt.Dialog
 import java.awt.FileDialog
 import java.awt.Frame
@@ -189,29 +186,14 @@ fun DirectorySelectionDialog(
     }
 }
 
-private suspend fun readPowerShellScriptOutputLines(script: String): List<String>? =
-    withContext(Dispatchers.IO) {
-        val command = script.replace('\n', ' ').replace(Regex(" {2,}"), " ")
-        runCatching {
-            Runtime.getRuntime()
-                .exec("powershell Invoke-Expression -Command '$command'")
-                .readOutputLines()
-        }.getOrNull()
-    }
-
-private suspend fun readShellCommandOutputLines(command: String): List<String>? =
-    withContext(Dispatchers.IO) {
-        runCatching {
-            Runtime.getRuntime().exec(arrayOf("sh", "-c", command)).readOutputLines()
-        }.getOrNull()
-    }
-
 /* file selected                      -> non-empty list
  * file not selected but dialog shown -> empty list
  * dialog not shown                   -> null
  */
-private suspend fun Process.readOutputLines(): List<String>? =
-    onExit().await()
-        .takeIf { exitValue() == 0 }
-        ?.inputStream?.bufferedReader()
-        ?.readLines()
+
+private suspend fun readPowerShellScriptOutputLines(script: String): List<String>? {
+    val command = script.replace('\n', ' ').replace(Regex(" {2,}"), " ")
+    return exec("powershell Invoke-Expression -Command '$command'")
+}
+
+private suspend fun readShellCommandOutputLines(command: String): List<String>? = exec(command)

@@ -1,6 +1,6 @@
 package com.amarland.svg2iv.state
 
-import androidx.compose.material.SnackbarDuration
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -28,6 +28,7 @@ import okio.buffer
 import okio.source
 import java.io.File
 import java.io.IOException
+import java.util.Collections.emptyList
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 import com.amarland.svg2iv.state.MainWindowBloc as Bloc
@@ -177,7 +178,7 @@ class MainWindowBloc {
                     }
                 }
 
-                MainWindowEvent.ErrorMessagesDialogCloseRequested ->
+                MainWindowEvent.InformationDialogCloseRequested ->
                     emit(currentState.copy(informationDialog = null))
 
                 MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
@@ -190,9 +191,11 @@ class MainWindowBloc {
     private suspend fun FlowCollector<MainWindowState>.onSourceFilesSelectionDialogClosed(
         paths: List<String>
     ) {
+        val hasPaths = paths.isNotEmpty()
+
         emit(
             currentState.copy(
-                isWorkInProgress = true,
+                isWorkInProgress = hasPaths,
                 selectionDialog = null,
                 sourceFilesSelectionTextFieldState = TextFieldState(
                     value = paths.singleOrNull() ?: paths.joinToString(),
@@ -202,41 +205,43 @@ class MainWindowBloc {
             )
         )
 
-        parseSourceFiles(paths)
+        if (hasPaths) {
+            parseSourceFiles(paths)
 
-        // delay(3.seconds)
+            // delay(3.seconds)
 
-        val didErrorsOccur = imageVectors.any { imageVector -> imageVector == null }
-        val imageVector =
-            if (imageVectors.isNotEmpty()) imageVectors[0]
-            else currentState.imageVector
-        emit(
-            currentState.copy(
-                isWorkInProgress = false,
-                sourceFilesSelectionTextFieldState = currentState
-                    .sourceFilesSelectionTextFieldState.copy(isError = didErrorsOccur),
-                extensionReceiverTextFieldState = currentState
-                    .extensionReceiverTextFieldState.copy(
-                        placeholder = imageVectors.firstOrNull()?.name
-                    ),
-                imageVector = imageVector,
-                isPreviousPreviewButtonVisible = false,
-                isNextPreviewButtonVisible = imageVectors.size > 1
-            )
-        )
-
-        if (didErrorsOccur) {
-            val message = "Error(s) occurred while trying to display a preview of the source(s)"
+            val didErrorsOccur = imageVectors.any { imageVector -> imageVector == null }
+            val imageVector =
+                if (imageVectors.isNotEmpty()) imageVectors[0]
+                else currentState.imageVector
             emit(
                 currentState.copy(
-                    snackbarInfo = SnackbarInfo(
-                        id = SNACKBAR_ID_PREVIEW_ERRORS,
-                        message = message,
-                        actionLabel = "View errors",
-                        duration = SnackbarDuration.Indefinite
-                    )
+                    isWorkInProgress = false,
+                    sourceFilesSelectionTextFieldState = currentState
+                        .sourceFilesSelectionTextFieldState.copy(isError = didErrorsOccur),
+                    extensionReceiverTextFieldState = currentState
+                        .extensionReceiverTextFieldState.copy(
+                            placeholder = imageVectors.firstOrNull()?.name
+                        ),
+                    imageVector = imageVector,
+                    isPreviousPreviewButtonVisible = false,
+                    isNextPreviewButtonVisible = imageVectors.size > 1
                 )
             )
+
+            if (didErrorsOccur) {
+                val message = "Error(s) occurred while trying to display a preview of the source(s)"
+                emit(
+                    currentState.copy(
+                        snackbarInfo = SnackbarInfo(
+                            id = SNACKBAR_ID_PREVIEW_ERRORS,
+                            message = message,
+                            actionLabel = "View errors",
+                            duration = SnackbarDuration.Indefinite
+                        )
+                    )
+                )
+            }
         }
     }
 
@@ -249,12 +254,10 @@ class MainWindowBloc {
         }
 
     private suspend fun parseSourceFiles(paths: List<String>) {
-        if (paths.isNotEmpty()) {
-            imageVectors.clear()
-            previewIndex = 0
+        imageVectors.clear()
+        previewIndex = 0
 
-            callCliTool(paths).also(imageVectors::addAll)
-        }
+        callCliTool(paths).also(imageVectors::addAll)
     }
 
     companion object {
@@ -269,12 +272,7 @@ class MainWindowBloc {
                 { bloc -> bloc.addEvent(MainWindowEvent.SelectDestinationDirectoryButtonClicked) }
 
             this[ShortcutKey.newInstance(Key.Escape)] =
-                { bloc ->
-                    val state = bloc.state.value
-                    if (state.informationDialog is InformationDialog.ErrorMessages) {
-                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
-                    }
-                }
+                { bloc -> bloc.addEvent(MainWindowEvent.InformationDialogCloseRequested) }
         }
 
         private const val MAX_ERROR_MESSAGE_COUNT = 8

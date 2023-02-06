@@ -1,6 +1,6 @@
 package com.amarland.svg2iv.ui
 
-import androidx.compose.material.SnackbarDuration
+import androidx.compose.material3.SnackbarDuration
 
 data class SnackbarInfo(
     val id: Int,

@@ -1,15 +1,15 @@
 import com.github.jk1.license.render.JsonReportRenderer
-import org.jetbrains.compose.compose
+import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.10"
-    id("org.jetbrains.compose") version "1.1.1"
-    id("app.cash.licensee") version "1.5.0"
+    kotlin("jvm") version "1.7.10"
+    id("org.jetbrains.compose") version "1.3.0"
+    id("app.cash.licensee") version "1.6.0"
     // id("com.autonomousapps.dependency-analysis") version "0.79.0"
     id("com.github.jk1.dependency-license-report") version "2.0"
-    id("com.google.devtools.ksp") version "1.6.10-1.0.4"
+    id("com.google.devtools.ksp") version "1.7.10-1.0.6"
 }
 
 sourceSets.main.configure {
@@ -21,6 +21,8 @@ dependencies {
     val coroutinesVersion = "1.6.4"
 
     implementation(compose.desktop.currentOs)
+    @OptIn(ExperimentalComposeLibrary::class)
+    implementation(compose.material3)
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$coroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:$coroutinesVersion")
@@ -28,6 +30,9 @@ dependencies {
     implementation("com.squareup.moshi:moshi:$moshiVersion")
     implementation("net.harawata:appdirs:1.2.1")
     implementation("com.google.iot.cbor:cbor:0.01.02")
+
+    // https://github.com/material-foundation/material-color-utilities/tree/main/java
+    implementation(files("libs/material-color-utilities.jar"))
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.0.0")

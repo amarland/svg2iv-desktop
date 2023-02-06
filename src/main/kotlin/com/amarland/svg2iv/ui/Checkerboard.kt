@@ -3,7 +3,7 @@ package com.amarland.svg2iv.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,14 +25,12 @@ fun Checkerboard(
         val maxWidth = constraints.maxWidth
         val maxHeight = constraints.maxHeight
 
-        val onSurfaceColor = MaterialTheme.colors.onSurface
-        val isInLightMode = MaterialTheme.colors.isLight
         val oddSquareActualColor =
             if (oddSquareColor.isSpecified) oddSquareColor
-            else onSurfaceColor.copy(alpha = if (isInLightMode) 0.38F else 0.54F)
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5F)
         val evenSquareActualColor =
             if (evenSquareColor.isSpecified) evenSquareColor
-            else onSurfaceColor.copy(alpha = if (isInLightMode) 0.08F else 0.16F)
+            else MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.5F)
 
         Canvas(
             modifier = Modifier.size(

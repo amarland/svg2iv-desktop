@@ -8,17 +8,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
@@ -33,11 +36,14 @@ import androidx.compose.ui.unit.dp
 import com.amarland.svg2iv.outerworld.DirectorySelectionDialog
 import com.amarland.svg2iv.outerworld.FileSelectionDialog
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
+import com.amarland.svg2iv.outerworld.getAccentColorInt
 import com.amarland.svg2iv.state.InformationDialog
 import com.amarland.svg2iv.state.MainWindowBloc
 import com.amarland.svg2iv.state.MainWindowEvent
 import com.amarland.svg2iv.state.MainWindowState
 import com.amarland.svg2iv.state.SelectionDialog
+import com.amarland.svg2iv.util.ColorScheme
+import io.material.color.utilities.scheme.Scheme
 
 private val LocalBloc = compositionLocalOf<MainWindowBloc> {
     error("CompositionLocal LocalBloc not provided!")
@@ -47,8 +53,8 @@ val LocalComposeWindow = compositionLocalOf<ComposeWindow> {
     error("CompositionLocal LocalComposeWindow not provided!")
 }
 
-private val ANDROID_GREEN = Color(0xFF00DE7A)
-private val ANDROID_BLUE = Color(0xFF2196F3)
+private val ANDROID_GREEN = 0xFF00DE7AU.toInt()
+private val ANDROID_BLUE = 0xFF2196F3U.toInt()
 
 private val JETBRAINS_MONO: FontFamily =
     FontFamily(Font(resource = "font/jetbrains_mono_regular.ttf"))
@@ -58,44 +64,44 @@ private val WORK_SANS: FontFamily =
 
 @Composable
 fun MainWindowContent(bloc: MainWindowBloc) {
-    val state = bloc.state.collectAsState().value
-
     CompositionLocalProvider(LocalBloc provides bloc) {
+        val state = bloc.state.collectAsState().value
+
         CircularReveal(targetState = state.isThemeDark) { isThemeDark ->
-            MaterialTheme(
-                colors = if (isThemeDark) {
-                    darkColors(
-                        primary = ANDROID_GREEN,
-                        secondary = ANDROID_BLUE,
-                        error = Color(0xFF9E394C)
-                    )
-                } else {
-                    lightColors(
-                        primary = ANDROID_BLUE,
-                        secondary = ANDROID_GREEN
-                    )
-                },
-                typography = Typography(defaultFontFamily = WORK_SANS)
-            ) {
-                Box {
-                    Column {
-                        AppBar()
+            var accentColor by remember { mutableStateOf<Int?>(0) }
 
-                        Row(
-                            modifier = Modifier.background(color = MaterialTheme.colors.background)
-                        ) {
-                            LeftPanel(state)
-                            RightPanel(state)
+            LaunchedEffect(Unit) {
+                accentColor = getAccentColorInt()
+            }
+
+            if (accentColor != 0) {
+                MaterialTheme(
+                    colorScheme = ColorScheme(
+                        if (isThemeDark) Scheme.dark(accentColor ?: ANDROID_GREEN)
+                        else Scheme.light(accentColor ?: ANDROID_BLUE)
+                    ),
+                    // typography = Typography(defaultFontFamily = WORK_SANS)
+                ) {
+                    Box {
+                        Column {
+                            AppBar()
+
+                            Row(
+                                modifier = Modifier.background(MaterialTheme.colorScheme.background)
+                            ) {
+                                LeftPanel(state)
+                                RightPanel(state)
+                            }
                         }
-                    }
 
-                    when (val dialog = state.informationDialog) {
-                        is InformationDialog.About -> AboutDialog(dialog)
-                        is InformationDialog.ErrorMessages -> ErrorMessagesDialog(dialog)
-                        null -> {
-                            if (state.isWorkInProgress) {
-                                SimpleDialog(isTransparent = true) {
-                                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                        when (val dialog = state.informationDialog) {
+                            is InformationDialog.About -> AboutDialog(dialog)
+                            is InformationDialog.ErrorMessages -> ErrorMessagesDialog(dialog)
+                            null -> {
+                                if (state.isWorkInProgress) {
+                                    SimpleDialog(isTransparent = true) {
+                                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                                    }
                                 }
                             }
                         }
@@ -106,6 +112,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar() {
     val bloc = LocalBloc.current
@@ -117,7 +124,7 @@ private fun AppBar() {
                     title,
                     spanStyles = listOf(
                         AnnotatedString.Range(
-                            item = MaterialTheme.typography.body2.toSpanStyle(),
+                            item = MaterialTheme.typography.bodyMedium.toSpanStyle(),
                             start = 9,
                             end = title.length
                         )
@@ -142,7 +149,7 @@ private fun AppBar() {
     )
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AboutDialog(dialog: InformationDialog.About) {
     SimpleDialog {
@@ -157,8 +164,8 @@ private fun AboutDialog(dialog: InformationDialog.About) {
                                 "$licenseCount ${if (licenseCount == 1) "license" else "licenses"}"
                             )
                         },
-                        text = { Text(dependency.moduleName) },
-                        secondaryText = { Text(dependency.moduleVersion) }
+                        headlineText = { Text(dependency.moduleName) },
+                        supportingText = { Text(dependency.moduleVersion) }
                     )
                 }
             }
@@ -200,7 +207,7 @@ private fun ErrorMessagesDialog(dialog: InformationDialog.ErrorMessages) {
 
                 TextButton(
                     onClick = {
-                        bloc.addEvent(MainWindowEvent.ErrorMessagesDialogCloseRequested)
+                        bloc.addEvent(MainWindowEvent.InformationDialogCloseRequested)
                     },
                     modifier = Modifier.padding(horizontal = 8.dp),
                 ) { Text("Close") }
@@ -235,11 +242,11 @@ private fun SimpleDialog(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LeftPanel(state: MainWindowState) {
     val bloc = LocalBloc.current
-    val scaffoldState = rememberScaffoldState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // not an absolute necessity, but makes handling Snackbars easier,
     // and allows "customization" of their width without visual "glitches",
@@ -247,7 +254,7 @@ private fun LeftPanel(state: MainWindowState) {
     // how to achieve this
     Scaffold(
         modifier = Modifier.fillMaxWidth(2F / 3F).fillMaxHeight(),
-        scaffoldState = scaffoldState
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) {
         if (state.selectionDialog != null) {
             val window = LocalComposeWindow.current
@@ -272,8 +279,11 @@ private fun LeftPanel(state: MainWindowState) {
         if (state.snackbarInfo != null) {
             LaunchedEffect(state.snackbarInfo) {
                 val (id, message, actionLabel, duration) = state.snackbarInfo
-                val result = scaffoldState.snackbarHostState
-                    .showSnackbar(message, actionLabel, duration)
+                val result = snackbarHostState.showSnackbar(
+                    message,
+                    actionLabel,
+                    duration = duration
+                )
                 if (result == SnackbarResult.ActionPerformed) {
                     bloc.addEvent(MainWindowEvent.SnackbarActionButtonClicked(id))
                 }
@@ -281,7 +291,7 @@ private fun LeftPanel(state: MainWindowState) {
         }
 
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.Center
         ) {
             val sourceFilesSelectionTextFieldState =
@@ -298,7 +308,7 @@ private fun LeftPanel(state: MainWindowState) {
                 isButtonEnabled = areButtonsEnabled
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CompositionLocalProvider(
@@ -315,6 +325,8 @@ private fun LeftPanel(state: MainWindowState) {
                 Text("Generate all assets in a single file")
             }
 
+            Spacer(modifier = Modifier.height(6.dp))
+
             val destinationDirectorySelectionTextFieldState =
                 state.destinationDirectorySelectionTextFieldState
             FileSystemEntitySelectionField(
@@ -323,10 +335,11 @@ private fun LeftPanel(state: MainWindowState) {
                 },
                 selectionMode = FileSystemEntitySelectionMode.DESTINATION,
                 value = destinationDirectorySelectionTextFieldState.value,
-                isError =
-                destinationDirectorySelectionTextFieldState.isError,
+                isError = destinationDirectorySelectionTextFieldState.isError,
                 isButtonEnabled = areButtonsEnabled
             )
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = state.extensionReceiverTextFieldState.value,
@@ -362,11 +375,9 @@ private fun RightPanel(state: MainWindowState) {
             // between different IVs using `VectorPainter`
             val notPainter = remember { ImageVectorNotPainter() } // not a sub-class of `Painter`
             val size = DpSize(maxWidth, maxHeight) * 0.925F
-            val tint = if (state.imageVector == null) {
-                MaterialTheme.colors.error
-            } else {
-                Color.Unspecified
-            }
+            val tint =
+                if (state.imageVector == null) MaterialTheme.colorScheme.error
+                else Color.Unspecified
             Canvas(modifier = Modifier.size(size)) {
                 notPainter.drawImageVectorInto(
                     this,
@@ -397,8 +408,8 @@ private fun RightPanel(state: MainWindowState) {
                 Text(
                     "Convert",
                     style = MaterialTheme.typography
-                        .button
-                        .copy(fontWeight = FontWeight.SemiBold)
+                        .labelLarge
+                        .copy(fontWeight = FontWeight.W600)
                 )
             },
             onClick = { bloc.addEvent(MainWindowEvent.ConvertButtonClicked) },
