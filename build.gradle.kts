@@ -4,12 +4,11 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.7.10"
-    id("org.jetbrains.compose") version "1.3.0"
-    id("app.cash.licensee") version "1.6.0"
-    // id("com.autonomousapps.dependency-analysis") version "0.79.0"
-    id("com.github.jk1.dependency-license-report") version "2.0"
-    id("com.google.devtools.ksp") version "1.7.10-1.0.6"
+    kotlin("jvm") version libs.versions.kotlin.asProvider().get()
+    alias(libs.plugins.compose)
+    alias(libs.plugins.licensee)
+    alias(libs.plugins.dependency.license.report)
+    alias(libs.plugins.ksp)
 }
 
 sourceSets.main.configure {
@@ -17,28 +16,25 @@ sourceSets.main.configure {
 }
 
 dependencies {
-    val moshiVersion = "1.13.0"
-    val coroutinesVersion = "1.6.4"
-
     implementation(compose.desktop.currentOs)
     @OptIn(ExperimentalComposeLibrary::class)
     implementation(compose.material3)
-    implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlin.coreLibrariesVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$coroutinesVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:$coroutinesVersion")
-    implementation("com.squareup:kotlinpoet:1.12.0")
-    implementation("com.squareup.moshi:moshi:$moshiVersion")
-    implementation("net.harawata:appdirs:1.2.1")
-    implementation("com.google.iot.cbor:cbor:0.01.02")
+    implementation(libs.kotlin.reflect)
+    implementation(libs.coroutines.jdk8)
+    implementation(libs.coroutines.swing)
+    implementation(libs.kotlinpoet)
+    implementation(libs.moshi)
+    implementation(libs.appdirs)
+    implementation(libs.cbor)
 
     // https://github.com/material-foundation/material-color-utilities/tree/main/java
     implementation(files("libs/material-color-utilities.jar"))
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.4.9")
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.kotlin.compile.testing)
 
-    ksp("com.squareup.moshi:moshi-kotlin-codegen:$moshiVersion")
+    ksp(libs.moshi.codegen)
 }
 
 compose.desktop {
