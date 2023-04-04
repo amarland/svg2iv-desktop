@@ -41,7 +41,7 @@ class MainWindowBloc {
     private val coroutineScope = MainScope()
 
     private val _state = MutableStateFlow(
-        MainWindowState.initial(isThemeDark = isDarkModeEnabled)
+        MainWindowState.initial(isThemeDark = useDarkMode)
     )
     val state = _state.asStateFlow()
 
@@ -69,7 +69,7 @@ class MainWindowBloc {
                     emit(
                         currentState.copy(isThemeDark = !currentState.isThemeDark)
                             .also { newState ->
-                                isDarkModeEnabled = newState.isThemeDark
+                                useDarkMode = newState.isThemeDark
                             }
                     )
 

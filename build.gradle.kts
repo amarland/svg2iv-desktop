@@ -1,5 +1,4 @@
 import com.github.jk1.license.render.JsonReportRenderer
-import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -17,7 +16,6 @@ sourceSets.main.configure {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    @OptIn(ExperimentalComposeLibrary::class)
     implementation(compose.material3)
     implementation(libs.kotlin.reflect)
     implementation(libs.coroutines.jdk8)

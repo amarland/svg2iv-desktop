@@ -4,10 +4,10 @@ import com.amarland.svg2iv.outerworld.readProperties
 import com.amarland.svg2iv.outerworld.writeProperties
 import kotlin.reflect.KProperty
 
-private const val KEY_IS_DARK_MODE_ENABLED = "is_dark_mode_enabled"
+private const val KEY_USE_DARK_MODE = "use_dark_mode"
 
-var isDarkModeEnabled by PropertiesDelegate(
-    KEY_IS_DARK_MODE_ENABLED,
+var useDarkMode by PropertiesDelegate(
+    KEY_USE_DARK_MODE,
     fromString = java.lang.Boolean::parseBoolean,
     defaultValue = false
 )
@@ -27,7 +27,6 @@ private class PropertiesDelegate<T>(
 
     private companion object {
 
-        @JvmStatic
         private val properties by lazy(LazyThreadSafetyMode.NONE, ::readProperties)
     }
 }
