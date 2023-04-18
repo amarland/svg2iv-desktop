@@ -62,7 +62,7 @@ private val JETBRAINS_MONO: FontFamily =
 @Composable
 fun MainWindowContent(bloc: MainWindowBloc) {
     CompositionLocalProvider(LocalBloc provides bloc) {
-        val state = bloc.state.collectAsState().value
+        val state by bloc.state.collectAsState()
 
         CircularReveal(targetState = state.isThemeDark) { isThemeDark ->
             var accentColor by remember { mutableStateOf<Int?>(0) }
