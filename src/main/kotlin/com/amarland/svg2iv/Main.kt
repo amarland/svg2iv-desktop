@@ -3,6 +3,7 @@
 package com.amarland.svg2iv
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.input.key.KeyEvent
@@ -21,7 +22,7 @@ import com.amarland.svg2iv.ui.LocalComposeWindow
 import com.amarland.svg2iv.ui.MainWindowContent
 import com.amarland.svg2iv.util.ShortcutKey
 
-private val mainWindowBloc = MainWindowBloc()
+private lateinit var mainWindowBloc: MainWindowBloc
 
 fun main() = singleWindowApplication(
     state = WindowState(
@@ -34,6 +35,8 @@ fun main() = singleWindowApplication(
     resizable = false,
     onPreviewKeyEvent = ::onPreviewKeyEvent
 ) {
+    mainWindowBloc = MainWindowBloc(rememberCoroutineScope())
+
     CompositionLocalProvider(LocalComposeWindow provides window) {
         MainWindowContent(mainWindowBloc)
     }

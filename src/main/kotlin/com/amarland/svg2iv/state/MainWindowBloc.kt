@@ -14,182 +14,167 @@ import com.amarland.svg2iv.util.LicenseReport
 import com.amarland.svg2iv.util.ShortcutKey
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import okio.buffer
 import okio.source
-import java.io.File
 import java.io.IOException
 import java.util.Collections.emptyList
-import kotlin.properties.ReadWriteProperty
-import kotlin.reflect.KProperty
+import kotlin.io.path.Path
+import kotlin.io.path.exists
 import com.amarland.svg2iv.state.MainWindowBloc as Bloc
 
-class MainWindowBloc {
+class MainWindowBloc(private val coroutineScope: CoroutineScope) {
 
     private val imageVectors = mutableListOf<ImageVector?>()
     private var previewIndex = 0
-
-    private val coroutineScope = MainScope()
 
     private val _state = MutableStateFlow(
         MainWindowState.initial(isThemeDark = useDarkMode)
     )
     val state = _state.asStateFlow()
 
-    private var currentState by StateFlowDelegate
-
-    private val eventSink: SendChannel<MainWindowEvent>
-
-    init {
-        eventSink = Channel(Channel.UNLIMITED)
-        coroutineScope.launch {
-            eventSink.consumeAsFlow().collect { event ->
-                mapEventToState(event).collect { state -> currentState = state }
-            }
-        }
-    }
+    private val currentState get() = _state.value
 
     fun addEvent(event: MainWindowEvent) {
-        coroutineScope.launch { eventSink.send(event) }
+        coroutineScope.launch {
+            mapEventToState(event, _state::emit)
+        }
     }
 
-    private fun mapEventToState(event: MainWindowEvent): Flow<MainWindowState> =
-        flow {
-            when (event) {
-                MainWindowEvent.ToggleThemeButtonClicked ->
-                    emit(
-                        currentState.copy(isThemeDark = !currentState.isThemeDark)
-                            .also { newState ->
-                                useDarkMode = newState.isThemeDark
-                            }
-                    )
+    private suspend fun mapEventToState(
+        event: MainWindowEvent,
+        emit: suspend (MainWindowState) -> Unit
+    ) {
+        when (event) {
+            MainWindowEvent.ToggleThemeButtonClicked ->
+                emit(
+                    currentState.copy(isThemeDark = !currentState.isThemeDark)
+                        .also { newState ->
+                            useDarkMode = newState.isThemeDark
+                        }
+                )
 
-                MainWindowEvent.AboutButtonClicked ->
-                    emit(
-                        currentState.copy(
-                            informationDialog = InformationDialog.About(
-                                listDependencies()
-                            )
+            MainWindowEvent.AboutButtonClicked ->
+                emit(
+                    currentState.copy(
+                        informationDialog = InformationDialog.About(
+                            listDependencies()
                         )
                     )
+                )
 
-                MainWindowEvent.SelectSourceFilesButtonClicked ->
-                    if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
+            MainWindowEvent.SelectSourceFilesButtonClicked ->
+                if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
+                    emit(
+                        currentState.copy(
+                            areFileSystemEntitySelectionButtonsEnabled = false,
+                            selectionDialog = SelectionDialog.Source
+                        )
+                    )
+                }
+
+            MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
+                if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
+                    emit(
+                        currentState.copy(
+                            areFileSystemEntitySelectionButtonsEnabled = false,
+                            selectionDialog = SelectionDialog.Destination
+                        )
+                    )
+                }
+
+            is MainWindowEvent.SourceFilesSelectionDialogClosed ->
+                onSourceFilesSelectionDialogClosed(event.paths, emit)
+
+            is MainWindowEvent.DestinationDirectorySelectionDialogClosed -> {
+                val path = event.path
+                emit(
+                    currentState.copy(
+                        selectionDialog = null,
+                        destinationDirectorySelectionTextFieldState = TextFieldState(
+                            value = path.orEmpty(),
+                            isError = path != null && !Path(path).exists()
+                        ),
+                        areFileSystemEntitySelectionButtonsEnabled = true
+                    )
+                )
+            }
+
+            is MainWindowEvent.AllInOneCheckboxClicked -> {
+                val isAllInOneCheckboxChecked = !currentState.isAllInOneCheckboxChecked
+                emit(currentState.copy(isAllInOneCheckboxChecked = isAllInOneCheckboxChecked))
+            }
+
+            MainWindowEvent.PreviousPreviewButtonClicked -> {
+                emit(
+                    currentState.copy(
+                        imageVector = imageVectors[--previewIndex],
+                        isPreviousPreviewButtonVisible = previewIndex > 0,
+                        isNextPreviewButtonVisible = true
+                    )
+                )
+            }
+
+            MainWindowEvent.NextPreviewButtonClicked -> {
+                emit(
+                    currentState.copy(
+                        imageVector = imageVectors[++previewIndex],
+                        isPreviousPreviewButtonVisible = true,
+                        isNextPreviewButtonVisible = previewIndex < imageVectors.lastIndex
+                    )
+                )
+            }
+
+            MainWindowEvent.ConvertButtonClicked -> {
+                try {
+                    writeImageVectorsToFile(
+                        currentState.destinationDirectorySelectionTextFieldState.value,
+                        imageVectors.filterNotNull(),
+                        currentState.extensionReceiverTextFieldState.value
+                    )
+                } catch (ioe: IOException) {
+                    TODO()
+                }
+                emit(currentState.copy(isWorkInProgress = true))
+            }
+
+            is MainWindowEvent.SnackbarActionButtonClicked -> {
+                when (val snackbarId = event.snackbarId) {
+                    SNACKBAR_ID_PREVIEW_ERRORS -> {
+                        val (errorMessages, hasMoreThanLimit) =
+                            readErrorMessages(MAX_ERROR_MESSAGE_COUNT)
                         emit(
                             currentState.copy(
-                                areFileSystemEntitySelectionButtonsEnabled = false,
-                                selectionDialog = SelectionDialog.Source
-                            )
-                        )
-                    }
-
-                MainWindowEvent.SelectDestinationDirectoryButtonClicked ->
-                    if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
-                        emit(
-                            currentState.copy(
-                                areFileSystemEntitySelectionButtonsEnabled = false,
-                                selectionDialog = SelectionDialog.Destination
-                            )
-                        )
-                    }
-
-                is MainWindowEvent.SourceFilesSelectionDialogClosed ->
-                    onSourceFilesSelectionDialogClosed(event.paths)
-
-                is MainWindowEvent.DestinationDirectorySelectionDialogClosed -> {
-                    val path = event.path
-                    emit(
-                        currentState.copy(
-                            selectionDialog = null,
-                            destinationDirectorySelectionTextFieldState = TextFieldState(
-                                value = path.orEmpty(),
-                                isError = path != null && !File(path).exists()
-                            ),
-                            areFileSystemEntitySelectionButtonsEnabled = true
-                        )
-                    )
-                }
-
-                is MainWindowEvent.AllInOneCheckboxClicked -> {
-                    val isAllInOneCheckboxChecked = !currentState.isAllInOneCheckboxChecked
-                    emit(currentState.copy(isAllInOneCheckboxChecked = isAllInOneCheckboxChecked))
-                }
-
-                MainWindowEvent.PreviousPreviewButtonClicked -> {
-                    emit(
-                        currentState.copy(
-                            imageVector = imageVectors[--previewIndex],
-                            isPreviousPreviewButtonVisible = previewIndex > 0,
-                            isNextPreviewButtonVisible = true
-                        )
-                    )
-                }
-
-                MainWindowEvent.NextPreviewButtonClicked -> {
-                    emit(
-                        currentState.copy(
-                            imageVector = imageVectors[++previewIndex],
-                            isPreviousPreviewButtonVisible = true,
-                            isNextPreviewButtonVisible = previewIndex < imageVectors.lastIndex
-                        )
-                    )
-                }
-
-                MainWindowEvent.ConvertButtonClicked -> {
-                    try {
-                        writeImageVectorsToFile(
-                            currentState.destinationDirectorySelectionTextFieldState.value,
-                            imageVectors.filterNotNull(),
-                            currentState.extensionReceiverTextFieldState.value
-                        )
-                    } catch (ioe: IOException) {
-                        TODO()
-                    }
-                    emit(currentState.copy(isWorkInProgress = true))
-                }
-
-                is MainWindowEvent.SnackbarActionButtonClicked -> {
-                    when (val snackbarId = event.snackbarId) {
-                        SNACKBAR_ID_PREVIEW_ERRORS -> {
-                            val (errorMessages, hasMoreThanLimit) =
-                                readErrorMessages(MAX_ERROR_MESSAGE_COUNT)
-                            emit(
-                                currentState.copy(
-                                    informationDialog = InformationDialog.ErrorMessages(
-                                        errorMessages,
-                                        isReadMoreButtonVisible = hasMoreThanLimit
-                                    )
+                                informationDialog = InformationDialog.ErrorMessages(
+                                    errorMessages,
+                                    isReadMoreButtonVisible = hasMoreThanLimit
                                 )
                             )
-                        }
+                        )
+                    }
 
-                        else -> {
-                            throw IllegalArgumentException("Unrecognized snackbar ID: $snackbarId")
-                        }
+                    else -> {
+                        throw IllegalArgumentException("Unrecognized snackbar ID: $snackbarId")
                     }
                 }
+            }
 
-                MainWindowEvent.InformationDialogCloseRequested ->
-                    emit(currentState.copy(informationDialog = null))
+            MainWindowEvent.InformationDialogCloseRequested ->
+                emit(currentState.copy(informationDialog = null))
 
-                MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
-                    openLogFileInPreferredApplication()
-                    emit(currentState.copy(informationDialog = null))
-                }
+            MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
+                openLogFileInPreferredApplication()
+                emit(currentState.copy(informationDialog = null))
             }
         }
+    }
 
-    private suspend fun FlowCollector<MainWindowState>.onSourceFilesSelectionDialogClosed(
-        paths: List<String>
+    private suspend fun onSourceFilesSelectionDialogClosed(
+        paths: List<String>,
+        emit: suspend (MainWindowState) -> Unit
     ) {
         val hasPaths = paths.isNotEmpty()
 
@@ -199,7 +184,7 @@ class MainWindowBloc {
                 selectionDialog = null,
                 sourceFilesSelectionTextFieldState = TextFieldState(
                     value = paths.singleOrNull() ?: paths.joinToString(),
-                    isError = paths.any { path -> !File(path).exists() }
+                    isError = paths.any { path -> !Path(path).exists() }
                 ),
                 areFileSystemEntitySelectionButtonsEnabled = true
             )
@@ -283,14 +268,5 @@ class MainWindowBloc {
             mode = LazyThreadSafetyMode.NONE,
             initializer = Moshi.Builder()::build
         )
-    }
-
-    private object StateFlowDelegate : ReadWriteProperty<Bloc, MainWindowState> {
-
-        override fun getValue(thisRef: Bloc, property: KProperty<*>) = thisRef._state.value
-
-        override fun setValue(thisRef: Bloc, property: KProperty<*>, value: MainWindowState) {
-            thisRef._state.value = value
-        }
     }
 }
