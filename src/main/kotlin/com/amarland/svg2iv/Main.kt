@@ -3,6 +3,7 @@
 package com.amarland.svg2iv
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.awt.awtEventOrNull
@@ -35,7 +36,12 @@ fun main() = singleWindowApplication(
     resizable = false,
     onPreviewKeyEvent = ::onPreviewKeyEvent
 ) {
-    mainWindowBloc = MainWindowBloc(rememberCoroutineScope())
+    val coroutineScope = rememberCoroutineScope()
+    remember {
+        MainWindowBloc(coroutineScope).also { bloc ->
+            mainWindowBloc = bloc
+        }
+    }
 
     CompositionLocalProvider(LocalComposeWindow provides window) {
         MainWindowContent(mainWindowBloc)
