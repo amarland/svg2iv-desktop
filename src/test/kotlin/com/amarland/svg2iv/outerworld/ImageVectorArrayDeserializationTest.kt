@@ -22,7 +22,7 @@ import org.json.JSONArray
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class ImageVectorArrayDeserializerTest {
+class ImageVectorArrayDeserializationTest {
 
     @Test
     fun fromCbor() {
@@ -49,24 +49,26 @@ class ImageVectorArrayDeserializerTest {
             |                "translationY": 50.0,
             |                "clipPathData": [
             |                   {
-            |                       "command": 1,
+            |                       "command": 0,
             |                       "arguments": [27.5, 27.5]
             |                   },
             |                   {
-            |                       "command": 5,
-            |                       "arguments": [276.5]
+            |                       "command": 1,
+            |                       "arguments": [276.5, 27.5]
             |                   },
             |                   {
-            |                       "command": 7,
-            |                       "arguments": [262.5]
+            |                       "command": 2
+            |                   }
+            |                   {
+            |                       "command": 1,
+            |                       "arguments": [276.5, 262.5]
             |                   },
             |                   {
-            |                       "command": 3,
+            |                       "command": 1,
             |                       "arguments": [27.5, 262.5]
             |                   },
             |                   {
-            |                       "command": 0,
-            |                       "arguments": null
+            |                       "command": 4
             |                   }
             |                ],
             |                "nodes": [
@@ -77,24 +79,23 @@ class ImageVectorArrayDeserializerTest {
             |                               "arguments": [2, 111]
             |                           },
             |                           {
-            |                               "command": 5,
-            |                               "arguments": [300]
+            |                               "command": 1,
+            |                               "arguments": [300, 111]
             |                           },
             |                           {
-            |                               "command": 4,
-            |                               "arguments": [-242.7, 176.3]
+            |                               "command": 1,
+            |                               "arguments": [57.3, 287.3]
             |                           },
             |                           {
-            |                               "command": 4,
-            |                               "arguments": [92.7, -285.3]
+            |                               "command": 1,
+            |                               "arguments": [150, 2]
             |                           },
             |                           {
-            |                               "command": 4,
-            |                               "arguments": [92.7, 285.3]
+            |                               "command": 1,
+            |                               "arguments": [242.7, 287.3]
             |                           },
             |                           {
-            |                               "command": 0,
-            |                               "arguments": null
+            |                               "command": 4
             |                           }
             |                       ],
             |                       "fillType": 1,
@@ -125,20 +126,23 @@ class ImageVectorArrayDeserializerTest {
             |            {
             |               "pathNodes": [
             |                   {
-            |                       "command": 1,
+            |                       "command": 0,
             |                       "arguments": [122.55, 80.325]
             |                   },
             |                   {
-            |                       "command": 17,
+            |                       "command": 3,
             |                       "arguments": [45, 45, 0, 1, 0, 167.25, 125.325]
             |                   },
             |                   {
-            |                       "command": 3,
+            |                       "command": 1,
             |                       "arguments": [167.25, 80.325]
             |                   },
             |                   {
-            |                       "command": 0,
-            |                       "arguments": []
+            |                       "command": 37,
+            |                       "arguments": [13.37, 123.45]
+            |                   },
+            |                   {
+            |                       "command": 4
             |                   }
             |               ],
             |               "fill": ${Color(85, 170, 255, 127).toArgb()}
@@ -172,8 +176,8 @@ class ImageVectorArrayDeserializerTest {
                 translationY = 50F,
                 clipPathData = listOf(
                     PathNode.MoveTo(27.5F, 27.5F),
-                    PathNode.HorizontalTo(276.5F),
-                    PathNode.VerticalTo(262.5F),
+                    PathNode.LineTo(276.5F, 27.5F),
+                    PathNode.LineTo(276.5F, 262.5F),
                     PathNode.LineTo(27.5F, 262.5F),
                     PathNode.Close
                 )
@@ -197,10 +201,10 @@ class ImageVectorArrayDeserializerTest {
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(2F, 111F)
-                    horizontalLineTo(300F)
-                    lineToRelative(-242.7F, 176.3F)
-                    lineToRelative(92.7F, -285.3F)
-                    lineToRelative(92.7F, 285.3F)
+                    lineTo(300F, 111F)
+                    lineTo(57.3F, 287.3F)
+                    lineTo(150F, 2F)
+                    lineTo(242.7F, 287.3F)
                     close()
                 }
             }.path(fill = SolidColor(Color(85, 170, 255, 127))) {

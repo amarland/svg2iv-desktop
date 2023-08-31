@@ -68,7 +68,8 @@ private fun buildVectorGroupOperation(vectorGroup: CborMap): ImageVectorBuilderO
             scaleY = vectorGroup["scaleY"].asOptionalFloat() ?: DefaultScaleY,
             translationX = vectorGroup["translationX"].asOptionalFloat() ?: DefaultTranslationX,
             translationY = vectorGroup["translationY"].asOptionalFloat() ?: DefaultTranslationY,
-            clipPathData = vectorGroup["clipPathData"]?.asIterableOfCborMaps()?.map(::mapPathNode) ?: EmptyPath
+            clipPathData = vectorGroup["clipPathData"]?.asIterableOfCborMaps()
+                ?.mapNotNull(::mapPathNode) ?: EmptyPath
         ) {
             val operations = buildVectorNodeOperations(vectorGroup["nodes"].asIterableOfCborMaps())
             for (operation in operations) operation(this@group)
@@ -78,7 +79,7 @@ private fun buildVectorGroupOperation(vectorGroup: CborMap): ImageVectorBuilderO
 private fun buildVectorPathOperation(vectorPath: CborMap): ImageVectorBuilderOperation =
     { builder: ImageVector.Builder ->
         builder.addPath(
-            pathData = vectorPath["pathNodes"].asIterableOfCborMaps().map(::mapPathNode),
+            pathData = vectorPath["pathNodes"].asIterableOfCborMaps().mapNotNull(::mapPathNode),
             pathFillType = when (vectorPath["fillType"].asOptionalInt()) {
                 0 -> PathFillType.NonZero
                 1 -> PathFillType.EvenOdd
@@ -109,43 +110,26 @@ private fun buildVectorPathOperation(vectorPath: CborMap): ImageVectorBuilderOpe
         )
     }
 
-private fun mapPathNode(map: CborMap): PathNode {
+private fun mapPathNode(map: CborMap): PathNode? {
     val argumentsObject = map["arguments"]
-    val args = if (argumentsObject == NULL) FloatArray(0) else argumentsObject.asFloatArray()
-    return when (map["command"].asInt()) {
-        1 -> PathNode.MoveTo(args[0], args[1])
-        2 -> PathNode.RelativeMoveTo(args[0], args[1])
-        3 -> PathNode.LineTo(args[0], args[1])
-        4 -> PathNode.RelativeLineTo(args[0], args[1])
-        5 -> PathNode.HorizontalTo(args[0])
-        6 -> PathNode.RelativeHorizontalTo(args[0])
-        7 -> PathNode.VerticalTo(args[0])
-        8 -> PathNode.RelativeVerticalTo(args[0])
-        9 -> PathNode.CurveTo(args[0], args[1], args[2], args[3], args[4], args[5])
-        10 -> PathNode.RelativeCurveTo(args[0], args[1], args[2], args[3], args[4], args[5])
-        11 -> PathNode.ReflectiveCurveTo(args[0], args[1], args[2], args[3])
-        12 -> PathNode.RelativeReflectiveCurveTo(args[0], args[1], args[2], args[3])
-        13 -> PathNode.QuadTo(args[0], args[1], args[2], args[3])
-        14 -> PathNode.RelativeQuadTo(args[0], args[1], args[2], args[3])
-        15 -> PathNode.ReflectiveQuadTo(args[0], args[1])
-        16 -> PathNode.RelativeReflectiveQuadTo(args[0], args[1])
-        17 -> PathNode.ArcTo(
+    val commandIndex = map["command"].asInt()
+
+    if (commandIndex == 4) return PathNode.Close
+    if (argumentsObject == NULL) return null
+
+    val args = argumentsObject.asFloatArray()
+    return when (commandIndex) {
+        0 -> PathNode.MoveTo(args[0], args[1])
+        1 -> PathNode.LineTo(args[0], args[1])
+        2 -> PathNode.CurveTo(args[0], args[1], args[2], args[3], args[4], args[5])
+        3 -> PathNode.ArcTo(
             args[0], args[1],
             args[2],
             args[3].asBoolean(),
             args[4].asBoolean(),
             args[5], args[6]
         )
-
-        18 -> PathNode.RelativeArcTo(
-            args[0], args[1],
-            args[2],
-            args[3].asBoolean(),
-            args[4].asBoolean(),
-            args[5], args[6]
-        )
-
-        else -> PathNode.Close
+        else -> null
     }
 }
 
