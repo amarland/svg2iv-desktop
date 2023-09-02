@@ -1,13 +1,10 @@
 package com.amarland.svg2iv.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
@@ -26,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +31,9 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.amarland.svg2iv.APPLICATION_NAME
+import com.amarland.svg2iv.APPLICATION_VERSION
+import com.amarland.svg2iv.PROJECT_REPOSITORY_URL
 import com.amarland.svg2iv.outerworld.DirectorySelectionDialog
 import com.amarland.svg2iv.outerworld.FileSelectionDialog
 import com.amarland.svg2iv.outerworld.FileSystemEntitySelectionMode
@@ -92,7 +93,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         }
 
                         when (val dialog = state.informationDialog) {
-                            is InformationDialog.About -> AboutDialog(dialog)
+                            is InformationDialog.About -> AboutDialog()
                             is InformationDialog.ErrorMessages -> ErrorMessagesDialog(dialog)
                             null -> {
                                 if (state.isWorkInProgress) {
@@ -146,32 +147,45 @@ private fun AppBar() {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AboutDialog(dialog: InformationDialog.About) {
+private fun AboutDialog() {
     SimpleDialog {
-        Box {
-            val listState = rememberLazyListState()
-            LazyColumn(state = listState) {
-                items(dialog.dependencies) { dependency ->
-                    val licenseCount = dependency.moduleLicenses?.size ?: 0
-                    ListItem(
-                        overlineText = {
-                            Text(
-                                "$licenseCount ${if (licenseCount == 1) "license" else "licenses"}"
-                            )
-                        },
-                        headlineText = { Text(dependency.moduleName) },
-                        supportingText = { Text(dependency.moduleVersion) }
-                    )
+        Column {
+            val typography = MaterialTheme.typography
+
+            Row {
+                Image(
+                    painter = painterResource("logo.svg"),
+                    contentDescription = null,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                        .size(32.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1F, fill = false)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(APPLICATION_NAME, style = typography.headlineSmall)
+                    Text(APPLICATION_VERSION, style = typography.bodyMedium)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("© 2023 Anthony Marland", style = typography.bodySmall)
                 }
             }
-            VerticalScrollbar(
-                modifier = Modifier.fillMaxHeight()
-                    .padding(all = 16.dp)
-                    .align(Alignment.CenterEnd),
-                adapter = rememberScrollbarAdapter(scrollState = listState)
-            )
+
+            val bloc = LocalBloc.current
+
+            Spacer(modifier = Modifier.height(24.dp))
+            ClickableText(
+                AnnotatedString(PROJECT_REPOSITORY_URL),
+                modifier = Modifier.padding(horizontal = 8.dp)
+                    .align(Alignment.CenterHorizontally),
+                style = typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary)
+            ) {
+                bloc.addEvent(MainWindowEvent.ProjectRepositoryUrlClicked)
+            }
+
+            DialogCloseButton(modifier = Modifier.align(Alignment.End))
         }
     }
 }
@@ -179,13 +193,9 @@ private fun AboutDialog(dialog: InformationDialog.About) {
 @Composable
 private fun ErrorMessagesDialog(dialog: InformationDialog.ErrorMessages) {
     SimpleDialog {
-        Column(modifier = Modifier.padding(top = 24.dp)) {
+        Column {
             for (message in dialog.messages) {
-                Text(
-                    message,
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    fontFamily = JETBRAINS_MONO,
-                )
+                Text(message, fontFamily = JETBRAINS_MONO)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -198,25 +208,34 @@ private fun ErrorMessagesDialog(dialog: InformationDialog.ErrorMessages) {
                         onClick = {
                             bloc.addEvent(MainWindowEvent.ReadMoreErrorMessagesActionClicked)
                         },
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 8.dp),
                     ) { Text("Read more") }
                 }
 
-                TextButton(
-                    onClick = {
-                        bloc.addEvent(MainWindowEvent.InformationDialogCloseRequested)
-                    },
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                ) { Text("Close") }
+                DialogCloseButton()
             }
         }
     }
 }
 
 @Composable
+private fun DialogCloseButton(modifier: Modifier = Modifier) {
+    val bloc = LocalBloc.current
+
+    TextButton(
+        onClick = {
+            bloc.addEvent(MainWindowEvent.InformationDialogCloseRequested)
+        },
+        modifier = modifier.padding(start = 8.dp, top = 8.dp, end = 8.dp),
+    ) {
+        Text("Close")
+    }
+}
+
+@Composable
 private fun SimpleDialog(
     isTransparent: Boolean = false,
-    content: @Composable () -> Unit
+    content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = Modifier.fillMaxSize()
@@ -230,10 +249,15 @@ private fun SimpleDialog(
             content()
         } else {
             Surface(
-                modifier = Modifier.widthIn(min = 320.dp, max = 680.dp)
+                modifier = Modifier.widthIn(max = 680.dp)
                     .padding(16.dp),
-                shape = MaterialTheme.shapes.medium,
-                content = content
+                shape = MaterialTheme.shapes.extraLarge,
+                content = {
+                    Box(
+                        modifier = Modifier.padding(16.dp),
+                        content = content
+                    )
+                }
             )
         }
     }
@@ -263,6 +287,7 @@ private fun LeftPanel(state: MainWindowState) {
                         )
                     }
                 }
+
                 SelectionDialog.Destination -> {
                     DirectorySelectionDialog(window) { selectedPath ->
                         bloc.addEvent(

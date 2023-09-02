@@ -59,18 +59,7 @@ fun readErrorMessages(limit: Int): Pair<List<String>, Boolean> {
     return (messages ?: emptyList()) to hasMoreThanLimit
 }
 
-fun openLogFileInPreferredApplication() {
-    Runtime.getRuntime().exec(
-        when {
-            IS_OS_WINDOWS -> "powershell Start-Process -FilePath "
-            IS_OS_MACOS -> "open "
-            else -> "xdg-open "
-        } + LOG_FILE_PATH.toString().let { filePath ->
-            if (IS_OS_WINDOWS) "\"$filePath\""
-            else filePath.replace(" ", "\\ ")
-        }
-    )
-}
+fun openLogFileInPreferredApplication() = openFile(LOG_FILE_PATH)
 
 private fun ensureParentDirectoriesExist(path: Path) {
     Files.createDirectories(path.parent)

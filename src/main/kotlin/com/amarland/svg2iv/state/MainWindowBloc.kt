@@ -4,24 +4,19 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.res.useResource
+import com.amarland.svg2iv.PROJECT_REPOSITORY_URL
 import com.amarland.svg2iv.outerworld.callCliTool
 import com.amarland.svg2iv.outerworld.openLogFileInPreferredApplication
+import com.amarland.svg2iv.outerworld.openUrl
 import com.amarland.svg2iv.outerworld.readErrorMessages
 import com.amarland.svg2iv.outerworld.writeImageVectorsToFile
 import com.amarland.svg2iv.ui.SnackbarInfo
-import com.amarland.svg2iv.util.LicenseReport
 import com.amarland.svg2iv.util.ShortcutKey
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.adapter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okio.buffer
-import okio.source
 import java.io.IOException
-import java.util.Collections.emptyList
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 import com.amarland.svg2iv.state.MainWindowBloc as Bloc
@@ -40,11 +35,11 @@ class MainWindowBloc(private val coroutineScope: CoroutineScope) {
 
     fun addEvent(event: MainWindowEvent) {
         coroutineScope.launch {
-            mapEventToState(event, _state::emit)
+            onEvent(event, _state::emit)
         }
     }
 
-    private suspend fun mapEventToState(
+    private suspend fun onEvent(
         event: MainWindowEvent,
         emit: suspend (MainWindowState) -> Unit
     ) {
@@ -58,13 +53,7 @@ class MainWindowBloc(private val coroutineScope: CoroutineScope) {
                 )
 
             MainWindowEvent.AboutButtonClicked ->
-                emit(
-                    currentState.copy(
-                        informationDialog = InformationDialog.About(
-                            listDependencies()
-                        )
-                    )
-                )
+                emit(currentState.copy(informationDialog = InformationDialog.About))
 
             MainWindowEvent.SelectSourceFilesButtonClicked ->
                 if (currentState.areFileSystemEntitySelectionButtonsEnabled) {
@@ -165,6 +154,8 @@ class MainWindowBloc(private val coroutineScope: CoroutineScope) {
             MainWindowEvent.InformationDialogCloseRequested ->
                 emit(currentState.copy(informationDialog = null))
 
+            MainWindowEvent.ProjectRepositoryUrlClicked -> openUrl(PROJECT_REPOSITORY_URL)
+
             MainWindowEvent.ReadMoreErrorMessagesActionClicked -> {
                 openLogFileInPreferredApplication()
                 emit(currentState.copy(informationDialog = null))
@@ -230,14 +221,6 @@ class MainWindowBloc(private val coroutineScope: CoroutineScope) {
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun listDependencies() =
-        useResource("license-report/license-report.json") {
-            moshi.adapter<LicenseReport>()
-                .fromJson(it.source().buffer())
-                ?.dependencies ?: emptyList()
-        }
-
     private suspend fun parseSourceFiles(paths: List<String>) {
         imageVectors.clear()
         previewIndex = 0
@@ -263,10 +246,5 @@ class MainWindowBloc(private val coroutineScope: CoroutineScope) {
         private const val MAX_ERROR_MESSAGE_COUNT = 8
 
         private const val SNACKBAR_ID_PREVIEW_ERRORS = 0x3B9ACA00
-
-        private val moshi by lazy(
-            mode = LazyThreadSafetyMode.NONE,
-            initializer = Moshi.Builder()::build
-        )
     }
 }

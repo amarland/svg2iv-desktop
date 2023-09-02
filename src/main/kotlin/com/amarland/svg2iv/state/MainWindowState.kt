@@ -5,7 +5,6 @@ import androidx.compose.material.icons.outlined.Face
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.amarland.svg2iv.ui.SnackbarInfo
-import com.amarland.svg2iv.util.Dependency
 
 @Immutable
 data class MainWindowState(
@@ -65,10 +64,8 @@ data class TextFieldState(
 @Immutable
 sealed interface InformationDialog {
 
-    @Immutable
-    data class About(val dependencies: List<Dependency>) : InformationDialog
+    object About : InformationDialog
 
-    @Immutable
     data class ErrorMessages(
         val messages: List<String>,
         val isReadMoreButtonVisible: Boolean

@@ -1,4 +1,3 @@
-import com.github.jk1.license.render.JsonReportRenderer
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -6,8 +5,6 @@ plugins {
     kotlin("jvm") version libs.versions.kotlin.asProvider().get()
     alias(libs.plugins.compose)
     alias(libs.plugins.licensee)
-    alias(libs.plugins.dependency.license.report)
-    alias(libs.plugins.ksp)
 }
 
 sourceSets.main.configure {
@@ -21,7 +18,6 @@ dependencies {
     implementation(libs.coroutines.jdk8)
     implementation(libs.coroutines.swing)
     implementation(libs.kotlinpoet)
-    implementation(libs.moshi)
     implementation(libs.appdirs)
     implementation(libs.cbor)
 
@@ -31,8 +27,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlin.compile.testing)
-
-    ksp(libs.moshi.codegen)
 }
 
 compose.desktop {
@@ -59,14 +53,6 @@ licensee {
     ignoreDependencies("net.java.dev.jna")
 }
 
-licenseReport {
-    val resourcesDirectoryPath = sourceSets.main.get()
-        .resources.srcDirs
-        .first().absolutePath
-    outputDir = "$resourcesDirectoryPath/license-report"
-    renderers = arrayOf(JsonReportRenderer("license-report.json", false))
-}
-
 tasks.test {
     useJUnitPlatform()
 }
@@ -84,9 +70,3 @@ tasks.withType<KotlinCompile>().all {
 }
 
 // apply(from = "prebuild.gradle")
-
-val configuration: Task.() -> Unit = {
-    dependsOn(tasks.generateLicenseReport)
-}
-tasks.build.configure(configuration)
-tasks.processResources.configure(configuration)

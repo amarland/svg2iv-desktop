@@ -23,6 +23,10 @@ import com.amarland.svg2iv.ui.LocalComposeWindow
 import com.amarland.svg2iv.ui.MainWindowContent
 import com.amarland.svg2iv.util.ShortcutKey
 
+const val APPLICATION_NAME = "svg2iv"
+const val APPLICATION_VERSION = "0.0.0-dev"
+const val PROJECT_REPOSITORY_URL = "https://github.com/amarland/svg2iv-desktop"
+
 private lateinit var mainWindowBloc: MainWindowBloc
 
 fun main() = singleWindowApplication(
