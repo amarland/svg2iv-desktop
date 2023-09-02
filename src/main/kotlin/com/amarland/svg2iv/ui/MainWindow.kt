@@ -58,7 +58,7 @@ private val ANDROID_GREEN = 0xFF00DE7AU.toInt()
 private val ANDROID_BLUE = 0xFF2196F3U.toInt()
 
 private val JETBRAINS_MONO: FontFamily =
-    FontFamily(Font(resource = "font/jetbrains_mono_regular.ttf"))
+    FontFamily(Font(resource = "font/JetBrainsMono/JetBrainsMono-Regular.ttf"))
 
 @Composable
 fun MainWindowContent(bloc: MainWindowBloc) {
@@ -78,7 +78,7 @@ fun MainWindowContent(bloc: MainWindowBloc) {
                         if (isThemeDark) Scheme.dark(accentColor ?: ANDROID_GREEN)
                         else Scheme.light(accentColor ?: ANDROID_BLUE)
                     ),
-                    typography = MaterialTheme.workSansTypography
+                    typography = MaterialTheme.notoSansTypography
                 ) {
                     Box {
                         Column {

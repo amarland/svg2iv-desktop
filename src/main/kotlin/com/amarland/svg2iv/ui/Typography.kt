@@ -6,27 +6,30 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.platform.Font
 
-private val WORK_SANS: FontFamily = FontFamily(Font(resource = "font/work_sans_variable.ttf"))
+private val NOTO_SANS: FontFamily = FontFamily(
+    Font(resource = "font/NotoSans/NotoSans-Regular.ttf"),
+    Font(resource = "font/NotoSans/NotoSans-Medium.ttf")
+)
 
-val MaterialTheme.workSansTypography
+val MaterialTheme.notoSansTypography
     @Composable
     @ReadOnlyComposable
     get() = with(typography) {
         copy(
-            displayLarge = displayLarge.copy(fontFamily = WORK_SANS),
-            displayMedium = displayMedium.copy(fontFamily = WORK_SANS),
-            displaySmall = displaySmall.copy(fontFamily = WORK_SANS),
-            headlineLarge = headlineLarge.copy(fontFamily = WORK_SANS),
-            headlineMedium = headlineMedium.copy(fontFamily = WORK_SANS),
-            headlineSmall = headlineSmall.copy(fontFamily = WORK_SANS),
-            titleLarge = titleLarge.copy(fontFamily = WORK_SANS),
-            titleMedium = titleMedium.copy(fontFamily = WORK_SANS),
-            titleSmall = titleSmall.copy(fontFamily = WORK_SANS),
-            bodyLarge = bodyLarge.copy(fontFamily = WORK_SANS),
-            bodyMedium = bodyMedium.copy(fontFamily = WORK_SANS),
-            bodySmall = bodySmall.copy(fontFamily = WORK_SANS),
-            labelLarge = labelLarge.copy(fontFamily = WORK_SANS),
-            labelMedium = labelMedium.copy(fontFamily = WORK_SANS),
-            labelSmall = labelSmall.copy(fontFamily = WORK_SANS)
+            displayLarge = displayLarge.copy(fontFamily = NOTO_SANS),
+            displayMedium = displayMedium.copy(fontFamily = NOTO_SANS),
+            displaySmall = displaySmall.copy(fontFamily = NOTO_SANS),
+            headlineLarge = headlineLarge.copy(fontFamily = NOTO_SANS),
+            headlineMedium = headlineMedium.copy(fontFamily = NOTO_SANS),
+            headlineSmall = headlineSmall.copy(fontFamily = NOTO_SANS),
+            titleLarge = titleLarge.copy(fontFamily = NOTO_SANS),
+            titleMedium = titleMedium.copy(fontFamily = NOTO_SANS),
+            titleSmall = titleSmall.copy(fontFamily = NOTO_SANS),
+            bodyLarge = bodyLarge.copy(fontFamily = NOTO_SANS),
+            bodyMedium = bodyMedium.copy(fontFamily = NOTO_SANS),
+            bodySmall = bodySmall.copy(fontFamily = NOTO_SANS),
+            labelLarge = labelLarge.copy(fontFamily = NOTO_SANS),
+            labelMedium = labelMedium.copy(fontFamily = NOTO_SANS),
+            labelSmall = labelSmall.copy(fontFamily = NOTO_SANS)
         )
     }
