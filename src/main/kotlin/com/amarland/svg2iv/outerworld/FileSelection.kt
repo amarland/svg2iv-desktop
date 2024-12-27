@@ -120,7 +120,7 @@ fun DirectorySelectionDialog(
             Add-Type -AssemblyName System.Windows.Forms;
             ${'$'}dialog = New-Object System.Windows.Forms.FolderBrowserDialog;
             if (${'$'}dialog.ShowDialog() -eq [Windows.Forms.DialogResult]::OK) {
-                Write- DocFinder.Output ${'$'}dialog.SelectedPath;
+                Write-Output ${'$'}dialog.SelectedPath;
             };"""
                 )?.let { lines ->
                     reassignablePath =
@@ -136,7 +136,7 @@ fun DirectorySelectionDialog(
                             if (lines.isEmpty()) ""
                             else {
                                 lines.singleOrNull()
-                                    ?.split(":")
+                                    ?.split(':')
                                     ?.drop(1) // "alias Macintosh HD"
                                     ?.joinToString("\\")
                                     ?.takeUnless { path -> path.isEmpty() }
